@@ -7,6 +7,7 @@ interface DataQualityProps {
 }
 
 export function DataQuality({ quality }: DataQualityProps) {
+  if (!quality) return null;
   const { totalCells, missingValues, missingPercent, duplicateRows, emptyColumns } = quality;
 
   const missingColor =

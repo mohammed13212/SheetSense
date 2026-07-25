@@ -14,5 +14,5 @@ export type ParsedFile = {
   colCount: number;
   previewRows: (string | number | boolean | null)[][];
   headers: string[];
-  dataQuality: DataQuality;
+  dataQuality?: DataQuality;
 };
