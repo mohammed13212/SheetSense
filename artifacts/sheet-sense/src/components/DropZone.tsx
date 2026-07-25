@@ -44,16 +44,6 @@ export function DropZone({ onFileAccepted, isLoading, error }: DropZoneProps) {
   };
 
   const validateAndProcessFile = (file: File) => {
-    // Check extension roughly
-    const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
-    if (!isExcel) {
-      // In a real app we'd trigger an error event up, but here we just pass it to the handler
-      // which will probably catch it, or we can handle it directly. Actually, the parent will process it
-      // but we should pass it to parent to show error state.
-      // Wait, we can let parent do validation or do it here. 
-      // The instruction says "Show an error state if the file is invalid or not an .xlsx/.xls file"
-      // We'll pass it up and let the parent handle the error logic so state is central.
-    }
     onFileAccepted(file);
   };
 
@@ -80,7 +70,7 @@ export function DropZone({ onFileAccepted, isLoading, error }: DropZoneProps) {
           type="file"
           ref={fileInputRef}
           onChange={handleFileChange}
-          accept=".xlsx, .xls"
+          accept=".xlsx,.xls,.csv"
           className="hidden"
         />
 
@@ -103,12 +93,12 @@ export function DropZone({ onFileAccepted, isLoading, error }: DropZoneProps) {
           
           <div className="space-y-2">
             <h3 className="text-xl font-medium text-foreground tracking-tight">
-              {isLoading ? "Reading notebook..." : "Drop your Excel file here"}
+              {isLoading ? "Reading file..." : "Drop your spreadsheet here"}
             </h3>
             <p className="text-sm text-muted-foreground max-w-[280px] leading-relaxed mx-auto">
               {isLoading 
                 ? "Parsing rows and columns locally..." 
-                : "Or click to browse. Supports .xlsx and .xls formats."}
+                : "Or click to browse. Supports .xlsx, .xls and .csv formats."}
             </p>
           </div>
         </div>

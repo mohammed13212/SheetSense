@@ -12,10 +12,10 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
 
   const processFile = useCallback((file: File) => {
-    // Validate file type
+    const isCsv = file.name.match(/\.csv$/i);
     const isExcel = file.name.match(/\.(xlsx|xls)$/i);
-    if (!isExcel) {
-      setError("Please upload a valid .xlsx or .xls file.");
+    if (!isCsv && !isExcel) {
+      setError("Please upload a valid .xlsx, .xls, or .csv file.");
       return;
     }
 
@@ -25,66 +25,67 @@ export default function Home() {
     // Give UI time to show loading state before blocking main thread with parsing
     setTimeout(() => {
       const reader = new FileReader();
-      
+
+      const parseWorkbook = (workbook: xlsx.WorkBook) => {
+        if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+          throw new Error("No sheets found in the file.");
+        }
+
+        // For CSV, replace the generic "Sheet1" name with the filename (minus extension)
+        let sheetNames = workbook.SheetNames;
+        if (isCsv && sheetNames.length === 1 && sheetNames[0] === 'Sheet1') {
+          const baseName = file.name.replace(/\.csv$/i, '');
+          workbook.SheetNames[0] = baseName;
+          workbook.Sheets[baseName] = workbook.Sheets['Sheet1'];
+          delete workbook.Sheets['Sheet1'];
+          sheetNames = [baseName];
+        }
+
+        const firstSheetName = sheetNames[0];
+        const firstSheet = workbook.Sheets[firstSheetName];
+
+        const jsonData = xlsx.utils.sheet_to_json(firstSheet, { header: 1, defval: null }) as any[][];
+
+        let headers: string[] = [];
+        let previewRows: any[][] = [];
+        let rowCount = 0;
+        let colCount = 0;
+
+        if (jsonData && jsonData.length > 0) {
+          rowCount = jsonData.length;
+          colCount = jsonData.reduce((max, row) => Math.max(max, row.length), 0);
+
+          const firstRow = jsonData[0] || [];
+          headers = Array.from({ length: colCount }).map((_, i) => {
+            const val = firstRow[i];
+            return val !== undefined && val !== null && val !== ""
+              ? String(val)
+              : `Column ${i + 1}`;
+          });
+
+          const dataRows = jsonData.slice(1);
+          previewRows = dataRows.slice(0, 10).map(row => {
+            const paddedRow = [...row];
+            while (paddedRow.length < colCount) paddedRow.push(null);
+            return paddedRow;
+          });
+        }
+
+        setParsedFile({ fileName: file.name, sheetNames, firstSheetName, rowCount, colCount, previewRows, headers });
+      };
+
       reader.onload = (e) => {
         try {
           if (!e.target?.result) throw new Error("Empty file content");
-          const data = new Uint8Array(e.target.result as ArrayBuffer);
-          const workbook = xlsx.read(data, { type: 'array' });
-          
-          if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
-            throw new Error("No sheets found in the workbook.");
+          if (isCsv) {
+            const text = e.target.result as string;
+            const workbook = xlsx.read(text, { type: 'string' });
+            parseWorkbook(workbook);
+          } else {
+            const data = new Uint8Array(e.target.result as ArrayBuffer);
+            const workbook = xlsx.read(data, { type: 'array' });
+            parseWorkbook(workbook);
           }
-
-          const sheetNames = workbook.SheetNames;
-          const firstSheetName = sheetNames[0];
-          const firstSheet = workbook.Sheets[firstSheetName];
-          
-          // Parse first sheet
-          const jsonData = xlsx.utils.sheet_to_json(firstSheet, { header: 1, defval: null }) as any[][];
-          
-          let headers: string[] = [];
-          let previewRows: any[][] = [];
-          let rowCount = 0;
-          let colCount = 0;
-          
-          if (jsonData && jsonData.length > 0) {
-            rowCount = jsonData.length;
-            
-            // Find max columns across all rows just to be safe, though usually headers define it
-            colCount = jsonData.reduce((max, row) => Math.max(max, row.length), 0);
-            
-            // Extract headers (first row), pad with generic names if missing
-            const firstRow = jsonData[0] || [];
-            headers = Array.from({ length: colCount }).map((_, i) => {
-              const val = firstRow[i];
-              return val !== undefined && val !== null && val !== "" 
-                ? String(val) 
-                : `Column ${i + 1}`;
-            });
-            
-            // The rest of the rows
-            const dataRows = jsonData.slice(1);
-            
-            // First 10 rows for preview, padded to match colCount
-            previewRows = dataRows.slice(0, 10).map(row => {
-              const paddedRow = [...row];
-              while (paddedRow.length < colCount) {
-                paddedRow.push(null);
-              }
-              return paddedRow;
-            });
-          }
-          
-          setParsedFile({
-            fileName: file.name,
-            sheetNames,
-            firstSheetName,
-            rowCount,
-            colCount,
-            previewRows,
-            headers
-          });
         } catch (err) {
           console.error(err);
           setError("Failed to parse the file. It might be corrupted or an unsupported format.");
@@ -98,8 +99,12 @@ export default function Home() {
         setIsLoading(false);
       };
 
-      reader.readAsArrayBuffer(file);
-    }, 50); 
+      if (isCsv) {
+        reader.readAsText(file);
+      } else {
+        reader.readAsArrayBuffer(file);
+      }
+    }, 50);
   }, []);
 
   const resetState = useCallback(() => {
