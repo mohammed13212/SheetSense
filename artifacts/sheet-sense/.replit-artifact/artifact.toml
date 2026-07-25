@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "SheetSense"
+version = "1.0.0"
+id = "artifacts/sheet-sense"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23439
+
+[services.development]
+run = "pnpm --filter @workspace/sheet-sense run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/sheet-sense", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/sheet-sense/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23439"
+BASE_PATH = "/"
