@@ -2,8 +2,9 @@ import { useState, useCallback } from "react";
 import * as xlsx from "xlsx";
 import { DropZone } from "@/components/DropZone";
 import { FileStats } from "@/components/FileStats";
+import { DataQuality } from "@/components/DataQuality";
 import { PreviewTable } from "@/components/PreviewTable";
-import type { ParsedFile } from "@/types";
+import type { ParsedFile, DataQuality as DataQualityType } from "@/types";
 import { FileSpreadsheet, RefreshCw, BarChart2 } from "lucide-react";
 
 export default function Home() {
@@ -71,7 +72,40 @@ export default function Home() {
           });
         }
 
-        setParsedFile({ fileName: file.name, sheetNames, firstSheetName, rowCount, colCount, previewRows, headers });
+        // Compute data quality metrics from all data rows (excluding header)
+        const allDataRows = jsonData.slice(1);
+        const totalCells = allDataRows.length * colCount;
+
+        let missingValues = 0;
+        for (const row of allDataRows) {
+          for (let c = 0; c < colCount; c++) {
+            const v = row[c];
+            if (v === null || v === undefined || v === '') missingValues++;
+          }
+        }
+
+        const missingPercent = totalCells > 0 ? (missingValues / totalCells) * 100 : 0;
+
+        // Duplicate rows: stringify each padded row and count repeats
+        const seen = new Set<string>();
+        let duplicateRows = 0;
+        for (const row of allDataRows) {
+          const key = JSON.stringify(Array.from({ length: colCount }, (_, i) => row[i] ?? null));
+          if (seen.has(key)) duplicateRows++;
+          else seen.add(key);
+        }
+
+        // Empty columns: all data values in that column are null/undefined/""
+        let emptyColumns = 0;
+        for (let c = 0; c < colCount; c++) {
+          if (allDataRows.every(row => row[c] === null || row[c] === undefined || row[c] === '')) {
+            emptyColumns++;
+          }
+        }
+
+        const dataQuality: DataQualityType = { totalCells, missingValues, missingPercent, duplicateRows, emptyColumns };
+
+        setParsedFile({ fileName: file.name, sheetNames, firstSheetName, rowCount, colCount, previewRows, headers, dataQuality });
       };
 
       reader.onload = (e) => {
@@ -167,6 +201,7 @@ export default function Home() {
             </div>
 
             <FileStats file={parsedFile} />
+            <DataQuality quality={parsedFile.dataQuality} />
             <PreviewTable file={parsedFile} />
           </div>
         )}

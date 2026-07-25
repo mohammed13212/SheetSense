@@ -1,3 +1,11 @@
+export type DataQuality = {
+  totalCells: number;
+  missingValues: number;
+  missingPercent: number;
+  duplicateRows: number;
+  emptyColumns: number;
+};
+
 export type ParsedFile = {
   fileName: string;
   sheetNames: string[];
@@ -6,4 +14,5 @@ export type ParsedFile = {
   colCount: number;
   previewRows: (string | number | boolean | null)[][];
   headers: string[];
+  dataQuality: DataQuality;
 };
