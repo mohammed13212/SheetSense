@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import { Route, Switch, Router as WouterRouter } from "wouter";
 import Home from "@/pages/Home";
+import RelationshipManager from "@/pages/RelationshipManager";
 import { LocaleProvider } from "@/i18n/context";
 import { DatasetProvider } from "@/store/DatasetContext";
 
@@ -13,6 +14,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/relationships" component={RelationshipManager} />
       <Route component={NotFound} />
     </Switch>
   );

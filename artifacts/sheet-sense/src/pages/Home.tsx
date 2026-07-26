@@ -1,10 +1,9 @@
 import { useState, useCallback } from "react";
-import { BarChart2, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DropZone } from "@/components/DropZone";
+import { AppHeader } from "@/components/AppHeader";
 import { DatasetSidebar } from "@/components/DatasetSidebar";
 import { DatasetPanel } from "@/components/DatasetPanel";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useLocale } from "@/i18n/context";
 import { useDatasets } from "@/store/DatasetContext";
 import { parseFile, FileParseError } from "@/lib/parseFile";
@@ -24,44 +23,10 @@ export default function Home() {
       className="flex flex-col h-[100dvh] bg-background text-foreground selection:bg-primary/20 selection:text-primary overflow-hidden"
     >
       {/* ── Header ── */}
-      <header className="h-16 shrink-0 border-b border-border bg-card/60 backdrop-blur-sm sticky top-0 z-20">
-        <div className="h-full px-4 md:px-5 flex items-center gap-3">
-          {/* Mobile hamburger — only when datasets exist */}
-          {hasDatasets && (
-            <button
-              onClick={() => setSidebarOpen(true)}
-              aria-label={t.datasets.openSidebar}
-              className="lg:hidden p-2 -ms-1 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-          )}
-
-          {/* Logo */}
-          <div className="flex items-center gap-2.5">
-            <div className="bg-primary p-2 rounded-lg text-primary-foreground shadow-sm shrink-0">
-              <BarChart2 className="w-5 h-5" />
-            </div>
-            <h1 className="text-xl font-bold tracking-tight text-foreground">
-              {t.nav.appName}
-            </h1>
-          </div>
-
-          {/* Dataset count badge (desktop) */}
-          {hasDatasets && (
-            <span className="hidden sm:inline text-xs text-muted-foreground bg-muted rounded-full px-2 py-0.5 tabular-nums">
-              {datasets.length}{" "}
-              {datasets.length === 1
-                ? t.datasets.sidebarTitle.replace(/s$/, "")
-                : t.datasets.sidebarTitle}
-            </span>
-          )}
-
-          <div className="ms-auto">
-            <LanguageSwitcher />
-          </div>
-        </div>
-      </header>
+      <AppHeader
+        showMenuButton={hasDatasets}
+        onMenuClick={() => setSidebarOpen(true)}
+      />
 
       {/* ── Body ── */}
       <div

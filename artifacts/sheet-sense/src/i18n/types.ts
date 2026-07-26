@@ -16,6 +16,8 @@ export type Translations = {
     appName: string;
     switchLang: string;
     switchLangAria: string;
+    workspace: string;
+    relationships: string;
   };
   hero: {
     heading: string;
@@ -133,6 +135,55 @@ export type Translations = {
       readyForViz: InsightRule;         // {score}
       needsMinorCleaning: InsightRule;  // {score}
       needsCleaning: InsightRule;       // {score}
+    };
+  };
+  relationships: {
+    pageTitle: string;
+    pageSubtitle: string;
+    noDatasets: string;
+    noDatasetsSub: string;
+    goToWorkspace: string;
+    datasetA: string;
+    datasetB: string;
+    selectDataset: string;
+    selectColumn: string;
+    columnsTitle: string;
+    noColumns: string;
+    typeNumeric: string;
+    typeCategorical: string;
+    typeUnknown: string;
+    suggestions: {
+      title: string;
+      subtitle: string;
+      empty: string;
+      noneSelected: string;
+      /** {n} */
+      countLabel: string;
+      confidence: {
+        high: string;
+        medium: string;
+        low: string;
+      };
+      createButton: string;
+      createTooltip: string;
+      reasons: {
+        /** {type} */
+        exactSameType: string;
+        /** {typeA}, {typeB} */
+        exactDiffType: string;
+        /** {type} */
+        partialSameType: string;
+        /** {typeA}, {typeB} */
+        partialDiffType: string;
+        /** {typeA}, {typeB} */
+        similarKeys: string;
+      };
+    };
+    diagram: {
+      title: string;
+      subtitle: string;
+      placeholder: string;
+      comingSoon: string;
     };
   };
   viz: {
