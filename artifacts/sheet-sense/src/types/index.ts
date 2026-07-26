@@ -60,3 +60,23 @@ export type ParsedFile = {
   dataQuality?: DataQuality;
   chartData?: ChartData;
 };
+
+// ─── Dataset ──────────────────────────────────────────────────────────────────
+//
+// Each uploaded file becomes a Dataset. Datasets are independent of each other
+// by design. This type is intentionally minimal — it is the extension point for
+// future inter-dataset features.
+//
+// To add relationship management later:
+//   1. Define a `DatasetRelationshipRef` type in a new `src/types/relationships.ts`
+//   2. Add `relationships?: DatasetRelationshipRef[]` here
+//   3. Extend `DatasetContext` with `addRelationship` / `removeRelationship` actions
+
+export type Dataset = {
+  /** Stable unique identifier generated at upload time. */
+  id: string;
+  /** Unix ms timestamp of when the file was uploaded in this session. */
+  uploadedAt: number;
+  /** All parsed data, quality metrics, and chart series for this file. */
+  file: ParsedFile;
+};

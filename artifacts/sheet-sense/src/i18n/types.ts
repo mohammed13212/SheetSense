@@ -37,6 +37,24 @@ export type Translations = {
     subtitle: string;
     uploadAnother: string;
   };
+  datasets: {
+    sidebarTitle: string;
+    addDataset: string;
+    uploading: string;
+    noDatasets: string;
+    /** {n} */
+    rows: string;
+    /** {n} */
+    cols: string;
+    /** {n} */
+    qualityScore: string;
+    removeDataset: string;
+    openSidebar: string;
+    closeSidebar: string;
+    activeLabel: string;
+    dropHint: string;
+    selectPrompt: string;
+  };
   fileStats: {
     fileName: string;
     totalSheets: string;

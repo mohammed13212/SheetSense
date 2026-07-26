@@ -5,6 +5,7 @@ import NotFound from "@/pages/not-found";
 import { Route, Switch, Router as WouterRouter } from "wouter";
 import Home from "@/pages/Home";
 import { LocaleProvider } from "@/i18n/context";
+import { DatasetProvider } from "@/store/DatasetContext";
 
 const queryClient = new QueryClient();
 
@@ -20,14 +21,19 @@ function Router() {
 function App() {
   return (
     <LocaleProvider>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-            <Router />
-          </WouterRouter>
-          <Toaster />
-        </TooltipProvider>
-      </QueryClientProvider>
+      {/* DatasetProvider is mounted above the router so all routes can access
+          the dataset store. Future pages (e.g. a RelationshipsPage) will use
+          the same useDatasets() hook without any prop drilling. */}
+      <DatasetProvider>
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+              <Router />
+            </WouterRouter>
+            <Toaster />
+          </TooltipProvider>
+        </QueryClientProvider>
+      </DatasetProvider>
     </LocaleProvider>
   );
 }
