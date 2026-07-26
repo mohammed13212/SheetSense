@@ -1,6 +1,7 @@
-import { useState, useRef, DragEvent, ChangeEvent } from "react";
-import { UploadCloud, FileSpreadsheet, AlertCircle, Loader2 } from "lucide-react";
+import { useState, useRef, type DragEvent, type ChangeEvent } from "react";
+import { UploadCloud, AlertCircle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/i18n/context";
 
 interface DropZoneProps {
   onFileAccepted: (file: File) => void;
@@ -9,6 +10,7 @@ interface DropZoneProps {
 }
 
 export function DropZone({ onFileAccepted, isLoading, error }: DropZoneProps) {
+  const { t } = useLocale();
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -28,23 +30,16 @@ export function DropZone({ onFileAccepted, isLoading, error }: DropZoneProps) {
     e.preventDefault();
     e.stopPropagation();
     setIsDragOver(false);
-
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const file = e.dataTransfer.files[0];
-      validateAndProcessFile(file);
+      onFileAccepted(e.dataTransfer.files[0]);
       e.dataTransfer.clearData();
     }
   };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      const file = e.target.files[0];
-      validateAndProcessFile(file);
+      onFileAccepted(e.target.files[0]);
     }
-  };
-
-  const validateAndProcessFile = (file: File) => {
-    onFileAccepted(file);
   };
 
   return (
@@ -62,7 +57,7 @@ export function DropZone({ onFileAccepted, isLoading, error }: DropZoneProps) {
             ? "border-primary bg-primary/5 scale-[1.02]"
             : "border-border/60 bg-card hover:border-primary/50 hover:bg-muted/30",
           isLoading && "pointer-events-none opacity-80",
-          error && "border-destructive/50 bg-destructive/5"
+          error && "border-destructive/50 bg-destructive/5",
         )}
       >
         <input
@@ -75,11 +70,11 @@ export function DropZone({ onFileAccepted, isLoading, error }: DropZoneProps) {
         />
 
         <div className="flex flex-col items-center text-center space-y-6">
-          <div 
+          <div
             className={cn(
               "w-20 h-20 rounded-full flex items-center justify-center transition-colors duration-300",
               isDragOver ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
-              error && "bg-destructive/10 text-destructive"
+              error && "bg-destructive/10 text-destructive",
             )}
           >
             {isLoading ? (
@@ -87,35 +82,39 @@ export function DropZone({ onFileAccepted, isLoading, error }: DropZoneProps) {
             ) : error ? (
               <AlertCircle className="w-10 h-10" data-testid="icon-error" />
             ) : (
-              <UploadCloud className={cn("w-10 h-10 transition-transform duration-300", isDragOver && "-translate-y-1")} data-testid="icon-upload" />
+              <UploadCloud
+                className={cn("w-10 h-10 transition-transform duration-300", isDragOver && "-translate-y-1")}
+                data-testid="icon-upload"
+              />
             )}
           </div>
-          
+
           <div className="space-y-2">
             <h3 className="text-xl font-medium text-foreground tracking-tight">
-              {isLoading ? "Reading file..." : "Drop your spreadsheet here"}
+              {isLoading ? t.dropzone.titleLoading : t.dropzone.title}
             </h3>
             <p className="text-sm text-muted-foreground max-w-[280px] leading-relaxed mx-auto">
-              {isLoading 
-                ? "Parsing rows and columns locally..." 
-                : "Or click to browse. Supports .xlsx, .xls and .csv formats."}
+              {isLoading ? t.dropzone.subtitleLoading : t.dropzone.subtitle}
             </p>
           </div>
         </div>
 
         {/* Decorative subtle grid background on hover/drag */}
-        <div 
+        <div
           className={cn(
             "absolute inset-0 z-[-1] transition-opacity duration-500 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+PHBhdGggZD0iTTAgMjBoMjBWMEgweiIgZmlsbD0ibm9uZSIvPPHBhdGggZD0iTTAgMTkuNWgyMFYwIiBzdHJva2U9IiNlNWU3ZWIiIHN0cm9rZS13aWR0aD0iMSIgZmlsbD0ibm9uZSIvPjwvc3ZnPg==')]",
             isDragOver ? "opacity-40" : "opacity-0 group-hover:opacity-20",
-            "dark:bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+PHBhdGggZD0iTTAgMjBoMjBWMEgweiIgZmlsbD0ibm9uZSIvPPHBhdGggZD0iTTAgMTkuNWgyMFYwIiBzdHJva2U9IiMzNzQxNTEiIHN0cm9rZS13aWR0aD0iMSIgZmlsbD0ibm9uZSIvPjwvc3ZnPg==')]"
+            "dark:bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+PHBhdGggZD0iTTAgMjBoMjBWMEgweiIgZmlsbD0ibm9uZSIvPPHBhdGggZD0iTTAgMTkuNWgyMFYwIiBzdHJva2U9IiMzNzQxNTEiIHN0cm9rZS13aWR0aD0iMSIgZmlsbD0ibm9uZSIvPjwvc3ZnPg==')]",
           )}
         />
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 text-destructive text-sm font-medium justify-center animate-in fade-in slide-in-from-top-1" data-testid="error-message">
-          <AlertCircle className="w-4 h-4" />
+        <div
+          className="flex items-center gap-2 text-destructive text-sm font-medium justify-center animate-in fade-in slide-in-from-top-1"
+          data-testid="error-message"
+        >
+          <AlertCircle className="w-4 h-4 shrink-0" />
           <span>{error}</span>
         </div>
       )}

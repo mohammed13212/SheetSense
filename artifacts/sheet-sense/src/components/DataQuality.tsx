@@ -1,77 +1,66 @@
 import type { ReactNode } from "react";
 import {
-  Hash, AlertTriangle, Percent, Copy, EyeOff,
-  Info, CheckCircle2, AlertCircle, XCircle,
-  Binary, Type, ShieldCheck,
+  Hash,
+  AlertTriangle,
+  Percent,
+  Copy,
+  EyeOff,
+  Info,
+  CheckCircle2,
+  AlertCircle,
+  XCircle,
+  Binary,
+  Type,
+  ShieldCheck,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { DataQuality as DataQualityType } from "@/types";
+import { useLocale } from "@/i18n/context";
 
-// ─── Status ───────────────────────────────────────────────────────────────────
+// ─── Status types ──────────────────────────────────────────────────────────────
 
 type Status = "healthy" | "warning" | "critical";
 
-const STATUS_CONFIG: Record<Status, {
-  label: string;
-  dot: string;
+// Hex values map to status — used for CSS borderInlineStart (RTL-aware)
+const STATUS_BORDER_COLOR: Record<Status, string> = {
+  healthy: "#10b981",  // emerald-500
+  warning: "#f59e0b",  // amber-500
+  critical: "#ef4444", // red-500
+};
+
+interface StatusConfig {
   badge: string;
-  border: string;
   icon: ReactNode;
   valueColor: string;
   pillText: string;
-}> = {
+  dot: string;
+}
+
+const STATUS_CONFIG: Record<Status, StatusConfig> = {
   healthy: {
-    label: "Healthy",
     dot: "bg-emerald-500",
     badge: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    border: "border-l-emerald-500",
     icon: <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />,
     valueColor: "text-foreground",
     pillText: "text-emerald-600",
   },
   warning: {
-    label: "Warning",
     dot: "bg-amber-500",
     badge: "bg-amber-50 text-amber-700 border-amber-200",
-    border: "border-l-amber-500",
     icon: <AlertCircle className="w-3.5 h-3.5 text-amber-600" />,
     valueColor: "text-amber-600",
     pillText: "text-amber-600",
   },
   critical: {
-    label: "Critical",
     dot: "bg-red-500",
     badge: "bg-red-50 text-red-700 border-red-200",
-    border: "border-l-red-500",
     icon: <XCircle className="w-3.5 h-3.5 text-red-600" />,
     valueColor: "text-red-600",
     pillText: "text-red-600",
   },
 };
 
-// ─── Score helpers ─────────────────────────────────────────────────────────────
-
-function getScoreStatus(score: number): Status {
-  if (score >= 80) return "healthy";
-  if (score >= 50) return "warning";
-  return "critical";
-}
-
-function getScoreGradient(score: number): string {
-  if (score >= 80) return "from-emerald-500 to-emerald-400";
-  if (score >= 50) return "from-amber-500 to-amber-400";
-  return "from-red-500 to-red-400";
-}
-
-function getScoreLabel(score: number): string {
-  if (score >= 90) return "Excellent";
-  if (score >= 80) return "Good";
-  if (score >= 60) return "Fair";
-  if (score >= 40) return "Poor";
-  return "Critical";
-}
-
-// ─── Metric definitions ────────────────────────────────────────────────────────
+// ─── Status helpers ────────────────────────────────────────────────────────────
 
 function getMissingStatus(pct: number): Status {
   if (pct > 20) return "critical";
@@ -85,90 +74,105 @@ function getOverallStatus(statuses: Status[]): Status {
   return "healthy";
 }
 
-interface MetricDef {
-  key: string;
-  label: string;
-  tooltip: string;
-  icon: ReactNode;
-  getValue: (q: DataQualityType) => string;
-  getStatus: (q: DataQualityType) => Status;
-  testId: string;
+function getScoreStatus(score: number): Status {
+  if (score >= 80) return "healthy";
+  if (score >= 50) return "warning";
+  return "critical";
 }
 
-const METRICS: MetricDef[] = [
-  {
-    key: "totalCells",
-    label: "Total Cells",
-    tooltip: "Total data cells analyzed — rows × columns, header excluded. Gives you the full scope of the dataset.",
-    icon: <Hash className="w-4 h-4" />,
-    getValue: (q) => q.totalCells.toLocaleString(),
-    getStatus: () => "healthy",
-    testId: "quality-total-cells",
-  },
-  {
-    key: "missingValues",
-    label: "Missing Values",
-    tooltip: "Cells with no value (null, empty, or blank). High counts may indicate data entry issues or export problems.",
-    icon: <AlertTriangle className="w-4 h-4" />,
-    getValue: (q) => q.missingValues.toLocaleString(),
-    getStatus: (q) => getMissingStatus(q.missingPercent),
-    testId: "quality-missing-values",
-  },
-  {
-    key: "missingPercent",
-    label: "Missing %",
-    tooltip: "Percentage of all cells that are blank. Above 5% is a warning; above 20% is critical and may significantly affect analysis.",
-    icon: <Percent className="w-4 h-4" />,
-    getValue: (q) => `${q.missingPercent.toFixed(1)}%`,
-    getStatus: (q) => getMissingStatus(q.missingPercent),
-    testId: "quality-missing-percent",
-  },
-  {
-    key: "duplicateRows",
-    label: "Duplicate Rows",
-    tooltip: "Rows where every column value is identical to another row. Duplicates can skew aggregations and totals.",
-    icon: <Copy className="w-4 h-4" />,
-    getValue: (q) => q.duplicateRows.toLocaleString(),
-    getStatus: (q) => (q.duplicateRows > 0 ? "warning" : "healthy"),
-    testId: "quality-duplicate-rows",
-  },
-  {
-    key: "emptyColumns",
-    label: "Empty Columns",
-    tooltip: "Columns where every data row is blank. These carry no information and are likely safe to remove.",
-    icon: <EyeOff className="w-4 h-4" />,
-    getValue: (q) => q.emptyColumns.toLocaleString(),
-    getStatus: (q) => (q.emptyColumns > 0 ? "critical" : "healthy"),
-    testId: "quality-empty-columns",
-  },
-  {
-    key: "numericColumns",
-    label: "Numeric Cols",
-    tooltip: "Columns where ≥60% of non-empty values are numbers. Numeric columns are ready for aggregation and math operations.",
-    icon: <Binary className="w-4 h-4" />,
-    getValue: (q) => q.numericColumns.toLocaleString(),
-    getStatus: () => "healthy",
-    testId: "quality-numeric-columns",
-  },
-  {
-    key: "textColumns",
-    label: "Text Cols",
-    tooltip: "Columns where most values are text strings. These are typically category, label, or identifier fields.",
-    icon: <Type className="w-4 h-4" />,
-    getValue: (q) => q.textColumns.toLocaleString(),
-    getStatus: () => "healthy",
-    testId: "quality-text-columns",
-  },
-];
+function getScoreGradient(score: number): string {
+  if (score >= 80) return "from-emerald-500 to-emerald-400";
+  if (score >= 50) return "from-amber-500 to-amber-400";
+  return "from-red-500 to-red-400";
+}
 
-// ─── Main component ────────────────────────────────────────────────────────────
+// ─── Component ────────────────────────────────────────────────────────────────
 
 interface DataQualityProps {
   quality?: DataQualityType;
 }
 
 export function DataQuality({ quality }: DataQualityProps) {
+  const { t } = useLocale();
+
   if (!quality) return null;
+
+  // Build metric definitions inline so labels/tooltips pick up current locale
+  type MetricDef = {
+    key: string;
+    label: string;
+    tooltip: string;
+    icon: ReactNode;
+    getValue: (q: DataQualityType) => string;
+    getStatus: (q: DataQualityType) => Status;
+    testId: string;
+  };
+
+  const METRICS: MetricDef[] = [
+    {
+      key: "totalCells",
+      label: t.metrics.totalCells.label,
+      tooltip: t.metrics.totalCells.tooltip,
+      icon: <Hash className="w-4 h-4" />,
+      getValue: (q) => q.totalCells.toLocaleString(),
+      getStatus: () => "healthy",
+      testId: "quality-total-cells",
+    },
+    {
+      key: "missingValues",
+      label: t.metrics.missingValues.label,
+      tooltip: t.metrics.missingValues.tooltip,
+      icon: <AlertTriangle className="w-4 h-4" />,
+      getValue: (q) => q.missingValues.toLocaleString(),
+      getStatus: (q) => getMissingStatus(q.missingPercent),
+      testId: "quality-missing-values",
+    },
+    {
+      key: "missingPercent",
+      label: t.metrics.missingPercent.label,
+      tooltip: t.metrics.missingPercent.tooltip,
+      icon: <Percent className="w-4 h-4" />,
+      getValue: (q) => `${q.missingPercent.toFixed(1)}%`,
+      getStatus: (q) => getMissingStatus(q.missingPercent),
+      testId: "quality-missing-percent",
+    },
+    {
+      key: "duplicateRows",
+      label: t.metrics.duplicateRows.label,
+      tooltip: t.metrics.duplicateRows.tooltip,
+      icon: <Copy className="w-4 h-4" />,
+      getValue: (q) => q.duplicateRows.toLocaleString(),
+      getStatus: (q) => (q.duplicateRows > 0 ? "warning" : "healthy"),
+      testId: "quality-duplicate-rows",
+    },
+    {
+      key: "emptyColumns",
+      label: t.metrics.emptyColumns.label,
+      tooltip: t.metrics.emptyColumns.tooltip,
+      icon: <EyeOff className="w-4 h-4" />,
+      getValue: (q) => q.emptyColumns.toLocaleString(),
+      getStatus: (q) => (q.emptyColumns > 0 ? "critical" : "healthy"),
+      testId: "quality-empty-columns",
+    },
+    {
+      key: "numericColumns",
+      label: t.metrics.numericColumns.label,
+      tooltip: t.metrics.numericColumns.tooltip,
+      icon: <Binary className="w-4 h-4" />,
+      getValue: (q) => q.numericColumns.toLocaleString(),
+      getStatus: () => "healthy",
+      testId: "quality-numeric-columns",
+    },
+    {
+      key: "textColumns",
+      label: t.metrics.textColumns.label,
+      tooltip: t.metrics.textColumns.tooltip,
+      icon: <Type className="w-4 h-4" />,
+      getValue: (q) => q.textColumns.toLocaleString(),
+      getStatus: () => "healthy",
+      testId: "quality-text-columns",
+    },
+  ];
 
   const statuses = METRICS.map((m) => m.getStatus(quality));
   const overall = getOverallStatus(statuses);
@@ -177,23 +181,22 @@ export function DataQuality({ quality }: DataQualityProps) {
 
   return (
     <section className="w-full flex flex-col gap-5" data-testid="data-quality-section">
-
       {/* ── Section header ── */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2.5">
           <ShieldCheck className="w-5 h-5 text-primary" />
           <h3 className="text-lg font-semibold text-foreground tracking-tight">
-            Data Quality Dashboard
+            {t.quality.sectionTitle}
           </h3>
           <span
             className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border ${overallCfg.badge}`}
             data-testid="quality-overall-status"
           >
             <span className={`w-1.5 h-1.5 rounded-full ${overallCfg.dot}`} />
-            {overallCfg.label}
+            {t.status[overall]}
           </span>
         </div>
-        <p className="text-xs text-muted-foreground">Hover the ⓘ icon on any card for details</p>
+        <p className="text-xs text-muted-foreground">{t.quality.hoverHint}</p>
       </div>
 
       {/* ── Quality Score Banner ── */}
@@ -212,7 +215,9 @@ export function DataQuality({ quality }: DataQualityProps) {
               icon={metric.icon}
               value={metric.getValue(quality)}
               status={status}
+              statusLabel={t.status[status]}
               cfg={cfg}
+              borderColor={STATUS_BORDER_COLOR[status]}
               testId={metric.testId}
             />
           );
@@ -230,9 +235,17 @@ interface QualityScoreBannerProps {
 }
 
 function QualityScoreBanner({ score, status }: QualityScoreBannerProps) {
+  const { t } = useLocale();
   const gradient = getScoreGradient(score);
-  const label = getScoreLabel(score);
   const cfg = STATUS_CONFIG[status];
+
+  // Map score to a translated label
+  const scoreLabelKey: keyof typeof t.scoreLabel =
+    score >= 90 ? "excellent"
+    : score >= 80 ? "good"
+    : score >= 60 ? "fair"
+    : score >= 40 ? "poor"
+    : "critical";
 
   return (
     <div
@@ -240,25 +253,22 @@ function QualityScoreBanner({ score, status }: QualityScoreBannerProps) {
       data-testid="quality-score-banner"
     >
       <div className="px-6 py-5 flex flex-col sm:flex-row sm:items-center gap-5">
-
-        {/* Left: score circle + label */}
+        {/* Left: score ring + label */}
         <div className="flex items-center gap-5 shrink-0">
-          {/* Circular score ring */}
-          <div className="relative w-20 h-20 shrink-0" aria-label={`Quality score: ${score} out of 100`}>
+          {/* SVG ring — always LTR visually */}
+          <div
+            className="relative w-20 h-20 shrink-0"
+            aria-label={`${t.quality.overallScore}: ${score} ${t.quality.outOf}`}
+          >
             <svg viewBox="0 0 80 80" className="w-full h-full -rotate-90" aria-hidden>
-              {/* Track */}
               <circle
                 cx="40" cy="40" r="32"
-                fill="none"
-                strokeWidth="8"
+                fill="none" strokeWidth="8"
                 className="stroke-muted/30"
               />
-              {/* Progress */}
               <circle
                 cx="40" cy="40" r="32"
-                fill="none"
-                strokeWidth="8"
-                strokeLinecap="round"
+                fill="none" strokeWidth="8" strokeLinecap="round"
                 strokeDasharray={`${2 * Math.PI * 32}`}
                 strokeDashoffset={`${2 * Math.PI * 32 * (1 - score / 100)}`}
                 className={`transition-all duration-700 ease-out ${
@@ -270,33 +280,36 @@ function QualityScoreBanner({ score, status }: QualityScoreBannerProps) {
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <span className={`text-xl font-bold leading-none ${cfg.valueColor}`}>{score}</span>
-              <span className="text-[10px] text-muted-foreground font-medium mt-0.5">/ 100</span>
+              <span className="text-[10px] text-muted-foreground font-medium mt-0.5">
+                {t.quality.outOf}
+              </span>
             </div>
           </div>
 
           {/* Label block */}
           <div className="flex flex-col gap-1">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              Overall Quality Score
+              {t.quality.overallScore}
             </p>
-            <p className={`text-2xl font-bold tracking-tight ${cfg.valueColor}`}>{label}</p>
+            <p className={`text-2xl font-bold tracking-tight ${cfg.valueColor}`}>
+              {t.scoreLabel[scoreLabelKey]}
+            </p>
             <span
               className={`self-start inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium border ${cfg.badge}`}
             >
               {cfg.icon}
-              {cfg.label}
+              {t.status[status]}
             </span>
           </div>
         </div>
 
-        {/* Right: horizontal progress bar */}
+        {/* Right: progress bar */}
         <div className="flex-1 flex flex-col gap-2 min-w-0">
           <div className="flex justify-between items-center text-xs text-muted-foreground">
-            <span>Score breakdown</span>
+            <span>{t.quality.scoreBreakdown}</span>
             <span className={`font-semibold ${cfg.valueColor}`}>{score}%</span>
           </div>
 
-          {/* Progress bar track */}
           <div className="relative h-3 w-full rounded-full bg-muted/40 overflow-hidden">
             <div
               className={`h-full rounded-full bg-gradient-to-r ${gradient} transition-all duration-700 ease-out`}
@@ -308,8 +321,8 @@ function QualityScoreBanner({ score, status }: QualityScoreBannerProps) {
             />
           </div>
 
-          {/* Threshold markers */}
-          <div className="relative flex text-[10px] text-muted-foreground font-medium select-none mt-0.5">
+          {/* Threshold markers — always LTR so 0 is on the left */}
+          <div className="relative flex text-[10px] text-muted-foreground font-medium select-none mt-0.5" dir="ltr">
             <span className="absolute left-0">0</span>
             <span className="absolute" style={{ left: "50%" }}>50</span>
             <span className="absolute" style={{ left: "80%" }}>80</span>
@@ -320,15 +333,15 @@ function QualityScoreBanner({ score, status }: QualityScoreBannerProps) {
           <div className="flex flex-wrap gap-3 mt-1 text-[10px] text-muted-foreground">
             <span className="flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-red-500 inline-block" />
-              0–49 Critical
+              {t.quality.legendCritical}
             </span>
             <span className="flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" />
-              50–79 Warning
+              {t.quality.legendWarning}
             </span>
             <span className="flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
-              80–100 Healthy
+              {t.quality.legendHealthy}
             </span>
           </div>
         </div>
@@ -345,11 +358,13 @@ interface MetricCardProps {
   icon: ReactNode;
   value: string;
   status: Status;
-  cfg: typeof STATUS_CONFIG[Status];
+  statusLabel: string;
+  cfg: StatusConfig;
+  borderColor: string;
   testId: string;
 }
 
-function MetricCard({ label, tooltip, icon, value, status, cfg, testId }: MetricCardProps) {
+function MetricCard({ label, tooltip, icon, value, status, statusLabel, cfg, borderColor, testId }: MetricCardProps) {
   const iconColor =
     status === "critical" ? "text-red-500"
     : status === "warning" ? "text-amber-500"
@@ -357,7 +372,12 @@ function MetricCard({ label, tooltip, icon, value, status, cfg, testId }: Metric
 
   return (
     <div
-      className={`relative bg-card border border-border border-l-4 ${cfg.border} rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200`}
+      className="relative bg-card border border-border rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200"
+      style={{
+        borderInlineStartWidth: "4px",
+        borderInlineStartColor: borderColor,
+        borderInlineStartStyle: "solid",
+      }}
       data-testid={testId}
     >
       <div className="p-5 flex flex-col gap-3">
@@ -373,7 +393,7 @@ function MetricCard({ label, tooltip, icon, value, status, cfg, testId }: Metric
             <TooltipTrigger asChild>
               <button
                 className="shrink-0 text-muted-foreground/40 hover:text-muted-foreground transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded"
-                aria-label={`Info about ${label}`}
+                aria-label={`Info: ${label}`}
                 data-testid={`${testId}-info`}
               >
                 <Info className="w-3.5 h-3.5" />
@@ -399,7 +419,9 @@ function MetricCard({ label, tooltip, icon, value, status, cfg, testId }: Metric
         {/* Status pill */}
         <div className="flex items-center gap-1.5">
           {cfg.icon}
-          <span className={`text-xs font-medium ${cfg.pillText}`}>{cfg.label}</span>
+          <span className={`text-xs font-medium ${cfg.pillText}`}>
+            {statusLabel}
+          </span>
         </div>
       </div>
     </div>
