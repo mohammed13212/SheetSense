@@ -9,6 +9,8 @@ export const RTL_LOCALES: Locale[] = ["ar"];
 // ─── Translation shape ────────────────────────────────────────────────────────
 // Every locale file must satisfy this interface in full.
 
+type InsightRule = { title: string; desc: string };
+
 export type Translations = {
   nav: {
     appName: string;
@@ -77,6 +79,43 @@ export type Translations = {
     /** Use {count} and {sheet} as placeholders. */
     showing: string;
     noData: string;
+  };
+  insights: {
+    sectionTitle: string;
+    subtitle: string;
+    generateButton: string;
+    generatingLabel: string;
+    poweredByRules: string;
+    /** Count badge: use {count} placeholder. */
+    insightCount: string;
+    kindLabel: {
+      success: string;
+      warning: string;
+      info: string;
+    };
+    rules: {
+      // Missing values
+      noMissingValues: InsightRule;
+      minorMissing: InsightRule;        // {pct}
+      significantMissing: InsightRule;  // {pct}, {count}
+      highMissing: InsightRule;         // {pct}, {count}
+      // Duplicates
+      noDuplicates: InsightRule;
+      duplicatesFound: InsightRule;     // {count}
+      // Empty columns
+      emptyColumnsFound: InsightRule;   // {count}
+      // Column types
+      numericAvailable: InsightRule;    // {count}
+      textAvailable: InsightRule;       // {count}
+      mixedDataset: InsightRule;
+      // Dataset size
+      smallDataset: InsightRule;        // {count}
+      largeDataset: InsightRule;        // {count}
+      // Overall verdict
+      readyForViz: InsightRule;         // {score}
+      needsMinorCleaning: InsightRule;  // {score}
+      needsCleaning: InsightRule;       // {score}
+    };
   };
   footer: {
     text: string;

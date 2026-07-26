@@ -3,6 +3,7 @@ import * as xlsx from "xlsx";
 import { DropZone } from "@/components/DropZone";
 import { FileStats } from "@/components/FileStats";
 import { DataQuality } from "@/components/DataQuality";
+import { Insights } from "@/components/Insights";
 import { PreviewTable } from "@/components/PreviewTable";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useLocale } from "@/i18n/context";
@@ -280,6 +281,16 @@ export default function Home() {
 
             <FileStats file={parsedFile} />
             <DataQuality quality={parsedFile.dataQuality} />
+            {parsedFile.dataQuality && (
+              <Insights
+                quality={parsedFile.dataQuality}
+                meta={{
+                  fileName: parsedFile.fileName,
+                  rowCount: parsedFile.rowCount,
+                  colCount: parsedFile.colCount,
+                }}
+              />
+            )}
             <PreviewTable file={parsedFile} />
           </div>
         )}

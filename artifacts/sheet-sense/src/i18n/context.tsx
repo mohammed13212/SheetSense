@@ -29,20 +29,6 @@ function readStoredLocale(): Locale {
   return DEFAULT_LOCALE;
 }
 
-// ─── Interpolation helper ─────────────────────────────────────────────────────
-// Replaces {key} placeholders in a translation string.
-// e.g. tpl('Showing {count} rows of "{sheet}"', { count: 5, sheet: "Sheet1" })
-
-export function tpl(
-  str: string,
-  vars: Record<string, string | number>,
-): string {
-  return Object.entries(vars).reduce<string>(
-    (acc, [k, v]) => acc.replaceAll(`{${k}}`, String(v)),
-    str,
-  );
-}
-
 // ─── Context ──────────────────────────────────────────────────────────────────
 
 interface LocaleContextValue {

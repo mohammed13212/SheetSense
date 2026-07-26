@@ -1,7 +1,7 @@
 import type { ParsedFile } from "@/types";
 import { cn } from "@/lib/utils";
 import { useLocale } from "@/i18n/context";
-import { tpl } from "@/i18n/context";
+import { tpl } from "@/i18n/tpl";
 
 interface PreviewTableProps {
   file: ParsedFile;
