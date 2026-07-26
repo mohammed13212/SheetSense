@@ -117,6 +117,39 @@ export type Translations = {
       needsCleaning: InsightRule;       // {score}
     };
   };
+  viz: {
+    sectionTitle: string;
+    subtitle: string;
+    noData: string;
+    selectColumn: string;
+    chartTypes: {
+      bar: string;
+      pie: string;
+      line: string;
+      histogram: string;
+    };
+    chartTitles: {
+      bar: string;        // {col}
+      pie: string;        // {col}
+      line: string;       // {col}
+      histogram: string;  // {col}
+    };
+    labels: {
+      count: string;
+      value: string;
+      frequency: string;
+      row: string;
+      other: string;
+      /** {n} */
+      totalRows: string;
+      /** {shown}, {total} */
+      uniqueValues: string;
+      /** {n} */
+      sampledPoints: string;
+      /** {min}, {mean}, {max} */
+      statsLine: string;
+    };
+  };
   footer: {
     text: string;
   };

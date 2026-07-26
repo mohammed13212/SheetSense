@@ -4,9 +4,11 @@ import { DropZone } from "@/components/DropZone";
 import { FileStats } from "@/components/FileStats";
 import { DataQuality } from "@/components/DataQuality";
 import { Insights } from "@/components/Insights";
+import { Visualizations } from "@/components/Visualizations";
 import { PreviewTable } from "@/components/PreviewTable";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useLocale } from "@/i18n/context";
+import { computeChartData } from "@/lib/chartData";
 import type { ParsedFile, DataQuality as DataQualityType } from "@/types";
 import { RefreshCw, BarChart2 } from "lucide-react";
 
@@ -166,6 +168,8 @@ export default function Home() {
             totalDataRows,
           };
 
+          const chartData = computeChartData(jsonData, colCount);
+
           setParsedFile({
             fileName: file.name,
             sheetNames,
@@ -175,6 +179,7 @@ export default function Home() {
             previewRows,
             headers,
             dataQuality,
+            chartData,
           });
         };
 
@@ -291,6 +296,7 @@ export default function Home() {
                 }}
               />
             )}
+            <Visualizations chartData={parsedFile.chartData} />
             <PreviewTable file={parsedFile} />
           </div>
         )}

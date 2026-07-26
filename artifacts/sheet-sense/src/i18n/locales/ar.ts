@@ -172,6 +172,36 @@ const ar: Translations = {
       },
     },
   },
+  viz: {
+    sectionTitle: "التصورات البيانية",
+    subtitle: "مخططات مُولَّدة تلقائيًا بناءً على أنواع الأعمدة المكتشفة",
+    noData:
+      "لم يتم اكتشاف أعمدة قابلة للتصور. قد تحتوي بياناتك على أعمدة فارغة أو غير مدعومة فقط.",
+    selectColumn: "العمود",
+    chartTypes: {
+      bar: "مخطط شريطي",
+      pie: "مخطط دائري",
+      line: "مخطط خطي",
+      histogram: "الرسم التوزيعي",
+    },
+    chartTitles: {
+      bar: 'أعلى القيم في "{col}"',
+      pie: 'توزيع "{col}"',
+      line: '"{col}" عبر الصفوف',
+      histogram: 'التوزيع القيمي لـ "{col}"',
+    },
+    labels: {
+      count: "العدد",
+      value: "القيمة",
+      frequency: "التكرار",
+      row: "الصف",
+      other: "أخرى",
+      totalRows: "تم تحليل {n} صف",
+      uniqueValues: "عرض {shown} من {total} قيمة فريدة",
+      sampledPoints: "تم أخذ عينة {n} نقطة لتحسين الأداء",
+      statsLine: "الأدنى {min} · المتوسط {mean} · الأقصى {max}",
+    },
+  },
   footer: {
     text: "معالجة محلية أولاً. بياناتك لا تغادر متصفحك أبدًا.",
   },

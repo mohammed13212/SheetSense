@@ -173,6 +173,36 @@ const en: Translations = {
       },
     },
   },
+  viz: {
+    sectionTitle: "Data Visualizations",
+    subtitle: "Auto-generated charts based on detected column types",
+    noData:
+      "No visualizable columns detected. Your dataset may contain only empty or unsupported columns.",
+    selectColumn: "Column",
+    chartTypes: {
+      bar: "Bar Chart",
+      pie: "Pie Chart",
+      line: "Line Chart",
+      histogram: "Histogram",
+    },
+    chartTitles: {
+      bar: 'Top values in "{col}"',
+      pie: 'Distribution of "{col}"',
+      line: '"{col}" across rows',
+      histogram: 'Value distribution of "{col}"',
+    },
+    labels: {
+      count: "Count",
+      value: "Value",
+      frequency: "Frequency",
+      row: "Row",
+      other: "Other",
+      totalRows: "{n} rows analyzed",
+      uniqueValues: "Showing {shown} of {total} unique values",
+      sampledPoints: "Sampled to {n} points for performance",
+      statsLine: "Min {min} · Mean {mean} · Max {max}",
+    },
+  },
   footer: {
     text: "Local-first processing. Your data never leaves your browser.",
   },
