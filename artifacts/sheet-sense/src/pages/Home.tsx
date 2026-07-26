@@ -103,7 +103,30 @@ export default function Home() {
           }
         }
 
-        const dataQuality: DataQualityType = { totalCells, missingValues, missingPercent, duplicateRows, emptyColumns };
+        // Column type detection: numeric if ≥60% of non-empty values are numbers
+        let numericColumns = 0;
+        let textColumns = 0;
+        for (let c = 0; c < colCount; c++) {
+          const nonEmpty = allDataRows
+            .map(row => row[c])
+            .filter(v => v !== null && v !== undefined && v !== '');
+          if (nonEmpty.length === 0) continue; // empty column — skip
+          const numericCount = nonEmpty.filter(v => typeof v === 'number' || (typeof v === 'string' && !isNaN(Number(v)) && v.trim() !== '')).length;
+          if (numericCount / nonEmpty.length >= 0.6) numericColumns++;
+          else textColumns++;
+        }
+
+        // Quality score (0–100): penalise missing data, duplicates, empty columns
+        const missingPenalty = Math.min(missingPercent * 2.5, 50);
+        const totalDataRows = allDataRows.length;
+        const dupPenalty = Math.min((duplicateRows / Math.max(totalDataRows, 1)) * 100, 25);
+        const emptyColPenalty = Math.min((emptyColumns / Math.max(colCount, 1)) * 100, 25);
+        const qualityScore = Math.round(Math.max(0, 100 - missingPenalty - dupPenalty - emptyColPenalty));
+
+        const dataQuality: DataQualityType = {
+          totalCells, missingValues, missingPercent, duplicateRows, emptyColumns,
+          numericColumns, textColumns, qualityScore, totalDataRows,
+        };
 
         setParsedFile({ fileName: file.name, sheetNames, firstSheetName, rowCount, colCount, previewRows, headers, dataQuality });
       };

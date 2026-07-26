@@ -4,6 +4,10 @@ export type DataQuality = {
   missingPercent: number;
   duplicateRows: number;
   emptyColumns: number;
+  numericColumns: number;
+  textColumns: number;
+  qualityScore: number;
+  totalDataRows: number;
 };
 
 export type ParsedFile = {
