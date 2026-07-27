@@ -268,6 +268,21 @@ const en: Translations = {
   footer: {
     text: "Local-first processing. Your data never leaves your browser.",
   },
+  tabs: {
+    overview: "Overview",
+    insights: "Insights",
+    charts: "Charts",
+    preview: "Data Preview",
+    topInsights: "Key Findings",
+    viewAllInsights: "View all",
+    noInsights: "No insights yet.",
+    viewDetails: "View details",
+    hideDetails: "Hide",
+    searchPlaceholder: "Search rows…",
+    noSearchResults: "No rows match your search.",
+    sortAsc: "Sort ascending",
+    sortDesc: "Sort descending",
+  },
 };
 
 export default en;

@@ -267,6 +267,21 @@ const ar: Translations = {
   footer: {
     text: "معالجة محلية أولاً. بياناتك لا تغادر متصفحك أبدًا.",
   },
+  tabs: {
+    overview: "نظرة عامة",
+    insights: "الرؤى",
+    charts: "المخططات",
+    preview: "معاينة البيانات",
+    topInsights: "أبرز النتائج",
+    viewAllInsights: "عرض الكل",
+    noInsights: "لا توجد رؤى بعد.",
+    viewDetails: "عرض التفاصيل",
+    hideDetails: "إخفاء",
+    searchPlaceholder: "البحث في الصفوف…",
+    noSearchResults: "لا توجد صفوف تطابق بحثك.",
+    sortAsc: "ترتيب تصاعدي",
+    sortDesc: "ترتيب تنازلي",
+  },
 };
 
 export default ar;

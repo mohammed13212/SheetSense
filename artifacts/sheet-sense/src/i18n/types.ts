@@ -222,4 +222,19 @@ export type Translations = {
   footer: {
     text: string;
   };
+  tabs: {
+    overview: string;
+    insights: string;
+    charts: string;
+    preview: string;
+    topInsights: string;
+    viewAllInsights: string;
+    noInsights: string;
+    viewDetails: string;
+    hideDetails: string;
+    searchPlaceholder: string;
+    noSearchResults: string;
+    sortAsc: string;
+    sortDesc: string;
+  };
 };

@@ -1,0 +1,114 @@
+I want to improve the user experience of SheetSense.
+
+Please make the following changes.
+
+========================
+1. Fix Multiple Dataset Upload
+========================
+
+Currently, when I upload another dataset, it does not get added correctly.
+
+Expected behavior:
+
+- Users can upload multiple datasets into the same project.
+- Uploading a new dataset must NEVER replace existing datasets.
+- Every uploaded dataset should appear in the datasets sidebar.
+- The user can switch between datasets.
+- Each dataset keeps its own analysis.
+- Each dataset can be deleted independently.
+
+This is a bug and should be fixed before anything else.
+
+========================
+2. Redesign the Analysis Workspace
+========================
+
+The current analysis page shows too much information at once.
+
+It feels overwhelming.
+
+Instead of one long scrolling page, redesign it into a tab-based workspace.
+
+Create these tabs:
+
+Overview
+Insights
+Charts
+Data Preview
+
+(Optional later)
+AI Chat
+
+========================
+Overview
+========================
+
+Show only:
+
+- Dataset name
+- Number of rows
+- Number of columns
+- Data quality score
+- 3 most important insights
+
+Do not show every statistic here.
+
+========================
+Insights
+========================
+
+Move all recommendation cards into this page.
+
+Reduce the size of each card.
+
+Each insight should contain:
+
+- Status icon
+- Short title
+- One or two lines maximum
+
+If more information exists, provide a "View Details" action.
+
+Avoid long paragraphs.
+
+========================
+Charts
+========================
+
+Move every generated chart into its own page.
+
+Provide a clean layout.
+
+Allow switching between charts without excessive scrolling.
+
+========================
+Data Preview
+========================
+
+Display only the data table.
+
+Keep it clean.
+
+Allow searching.
+
+Allow sorting columns.
+
+========================
+General UX
+========================
+
+Reduce scrolling.
+
+Reduce visual clutter.
+
+Increase whitespace.
+
+Keep the interface calm.
+
+Keep the current design system and colors.
+
+Do NOT redesign everything.
+
+Only reorganize the information into a much cleaner experience.
+
+The application should feel easier for first-time users.
