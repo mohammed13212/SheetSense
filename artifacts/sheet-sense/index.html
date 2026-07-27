@@ -1,21 +1,44 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
     <title>SheetSense</title>
-    <meta name="description" content="SheetSense — built on Replit. Update this description to reflect the app." />
+    <meta name="description" content="SheetSense — analyze your spreadsheets locally. No uploads, no servers, instant insights." />
     <meta name="robots" content="index, follow" />
     <meta property="og:title" content="SheetSense" />
-    <meta property="og:description" content="SheetSense — built on Replit. Update this description to reflect the app." />
+    <meta property="og:description" content="SheetSense — analyze your spreadsheets locally. No uploads, no servers, instant insights." />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="SheetSense" />
-    <meta name="twitter:description" content="SheetSense — built on Replit. Update this description to reflect the app." />
+    <meta name="twitter:description" content="SheetSense — analyze your spreadsheets locally. No uploads, no servers, instant insights." />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!--
+      Theme initialiser — runs synchronously before first paint to avoid any
+      flash of the wrong theme. Reads localStorage key "sheetsense-theme";
+      defaults to "dark" (the primary experience). Toggleable at runtime by
+      calling window.__setTheme('light') or window.__setTheme('dark').
+    -->
+    <script>
+      (function () {
+        var stored = localStorage.getItem('sheetsense-theme');
+        var theme  = stored === 'light' ? 'light' : 'dark';
+        document.documentElement.classList.toggle('dark', theme === 'dark');
+        window.__setTheme = function (t) {
+          document.documentElement.classList.toggle('dark', t === 'dark');
+          try { localStorage.setItem('sheetsense-theme', t); } catch (_) {}
+        };
+      })();
+    </script>
+
+    <!-- Fonts: Inter (Latin) + IBM Plex Sans Arabic -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
     <div id="root"></div>

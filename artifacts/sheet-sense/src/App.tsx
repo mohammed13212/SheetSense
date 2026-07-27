@@ -23,9 +23,8 @@ function Router() {
 function App() {
   return (
     <LocaleProvider>
-      {/* DatasetProvider is mounted above the router so all routes can access
-          the dataset store. Future pages (e.g. a RelationshipsPage) will use
-          the same useDatasets() hook without any prop drilling. */}
+      {/* DatasetProvider is mounted above the router so all routes share
+          the same dataset store without prop drilling. */}
       <DatasetProvider>
         <QueryClientProvider client={queryClient}>
           <TooltipProvider>
