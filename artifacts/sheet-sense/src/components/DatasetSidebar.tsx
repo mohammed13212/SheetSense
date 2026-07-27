@@ -27,16 +27,22 @@ export function DatasetSidebar({ isOpen, onClose }: DatasetSidebarProps) {
   const dropRef = useRef<HTMLDivElement>(null);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
 
+  // Accept a plain File[] — never a live FileList.
+  // FileList is a live reference to the input element's internal collection.
+  // Resetting the input (value = "") or returning from a drag event clears it,
+  // so any async handler that receives a FileList and yields before iterating
+  // will see an empty list. Converting to File[] synchronously in the event
+  // handler — before any reset or yield — gives us an independent snapshot.
   const handleFiles = useCallback(
-    async (files: FileList | null) => {
-      if (!files || files.length === 0) return;
+    async (files: File[]) => {
+      if (files.length === 0) return;
       setIsUploading(true);
       setUploadError(null);
       // Small delay so the loading indicator renders before xlsx blocks the thread
       await new Promise((r) => setTimeout(r, 50));
       try {
         // Process files sequentially; the last one becomes active
-        for (const file of Array.from(files)) {
+        for (const file of files) {
           const pf = await parseFile(file);
           addDataset(pf);
         }
@@ -60,8 +66,11 @@ export function DatasetSidebar({ isOpen, onClose }: DatasetSidebarProps) {
   );
 
   const onFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    handleFiles(e.target.files);
+    // Convert to a plain array synchronously — before the reset below clears
+    // the live FileList that e.target.files points to.
+    const files = Array.from(e.target.files ?? []);
     e.target.value = ""; // allow re-selecting the same file
+    handleFiles(files);
   };
 
   const onDragOver = (e: React.DragEvent) => {
@@ -72,7 +81,9 @@ export function DatasetSidebar({ isOpen, onClose }: DatasetSidebarProps) {
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDraggingOver(false);
-    handleFiles(e.dataTransfer.files);
+    // Convert synchronously — dataTransfer is cleared once the event handler
+    // returns, so passing the live FileList into an async function loses it.
+    handleFiles(Array.from(e.dataTransfer.files));
   };
 
   return (
