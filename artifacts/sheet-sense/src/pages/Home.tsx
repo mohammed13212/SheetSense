@@ -78,15 +78,20 @@ function HeroUpload() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const processFile = useCallback(
-    async (file: File) => {
+  const processFiles = useCallback(
+    async (files: File[]) => {
+      if (files.length === 0) return;
       setIsLoading(true);
       setError(null);
       // Yield to React so the loading indicator renders before xlsx blocks the thread
       await new Promise((r) => setTimeout(r, 50));
       try {
-        const pf = await parseFile(file);
-        addDataset(pf);
+        // Process files sequentially; each one becomes its own dataset.
+        // The last successfully parsed file becomes the active selection.
+        for (const file of files) {
+          const pf = await parseFile(file);
+          addDataset(pf);
+        }
       } catch (err) {
         if (err instanceof FileParseError) {
           const map: Record<string, string> = {
@@ -117,7 +122,7 @@ function HeroUpload() {
         </p>
       </div>
       <DropZone
-        onFileAccepted={processFile}
+        onFilesAccepted={processFiles}
         isLoading={isLoading}
         error={error}
       />

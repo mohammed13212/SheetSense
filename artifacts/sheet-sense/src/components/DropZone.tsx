@@ -4,12 +4,14 @@ import { cn } from "@/lib/utils";
 import { useLocale } from "@/i18n/context";
 
 interface DropZoneProps {
-  onFileAccepted: (file: File) => void;
+  /** Called with every accepted file. Multiple files are passed together when
+   *  the user drops or selects more than one at a time. */
+  onFilesAccepted: (files: File[]) => void;
   isLoading: boolean;
   error?: string | null;
 }
 
-export function DropZone({ onFileAccepted, isLoading, error }: DropZoneProps) {
+export function DropZone({ onFilesAccepted, isLoading, error }: DropZoneProps) {
   const { t } = useLocale();
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -31,14 +33,16 @@ export function DropZone({ onFileAccepted, isLoading, error }: DropZoneProps) {
     e.stopPropagation();
     setIsDragOver(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      onFileAccepted(e.dataTransfer.files[0]);
+      onFilesAccepted(Array.from(e.dataTransfer.files));
       e.dataTransfer.clearData();
     }
   };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      onFileAccepted(e.target.files[0]);
+      onFilesAccepted(Array.from(e.target.files));
+      // Reset so the same file(s) can be re-selected
+      e.target.value = "";
     }
   };
 
@@ -66,6 +70,7 @@ export function DropZone({ onFileAccepted, isLoading, error }: DropZoneProps) {
           ref={fileInputRef}
           onChange={handleFileChange}
           accept=".xlsx,.xls,.csv"
+          multiple
           className="hidden"
         />
 
