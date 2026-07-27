@@ -1,4 +1,5 @@
 import {
+  bigint,
   boolean,
   integer,
   jsonb,
@@ -33,14 +34,14 @@ export const uploadedFilesTable = pgTable("uploaded_files", {
    */
   mimeType: text("mime_type").notNull(),
 
-  /** File size in bytes. */
-  fileSize: integer("file_size").notNull(),
+  /** File size in bytes. bigint accommodates files larger than 2 GB. */
+  fileSize: bigint("file_size", { mode: "number" }).notNull(),
 
-  /** Total number of rows including the header row. */
-  rowCount: integer("row_count").notNull(),
+  /** Total number of rows including the header row. Nullable until processing completes. */
+  rowCount: integer("row_count"),
 
-  /** Number of columns in the first / active sheet. */
-  colCount: integer("col_count").notNull(),
+  /** Number of columns in the first / active sheet. Nullable until processing completes. */
+  colCount: integer("col_count"),
 
   /**
    * Ordered list of column header strings extracted from the first row.
