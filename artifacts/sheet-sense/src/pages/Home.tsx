@@ -19,7 +19,9 @@ export default function Home() {
   // showHero: true = landing/hero view; false = workspace view.
   // Starts on the hero. Auto-switches to workspace after the first upload.
   // Logo click from workspace returns here without losing any data.
-  const [showHero, setShowHero] = useState(true);
+  // Lazy initialiser: if datasets already exist (e.g. navigating back from
+  // /relationships), skip the hero and go straight to the workspace.
+  const [showHero, setShowHero] = useState(() => datasets.length === 0);
 
   const hasDatasets = datasets.length > 0;
   const inWorkspace = hasDatasets && !showHero;

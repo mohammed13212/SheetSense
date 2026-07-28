@@ -88,7 +88,7 @@ export default function RelationshipManager() {
       dir={dir}
       className="flex flex-col h-[100dvh] bg-background text-foreground overflow-hidden"
     >
-      <AppHeader />
+      <AppHeader isInWorkspace={hasDatasets} />
 
       <main className="flex-1 overflow-y-auto">
         <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 space-y-8">
