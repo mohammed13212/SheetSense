@@ -276,6 +276,8 @@ const ar: Translations = {
   },
   footer: {
     text: "معالجة محلية أولاً. بياناتك لا تغادر متصفحك أبدًا.",
+    privacyTitle: "خصوصيتك أولًا",
+    privacyDesc: "ملفاتك لا تغادر متصفحك أبدًا.",
   },
   tabs: {
     overview: "نظرة عامة",

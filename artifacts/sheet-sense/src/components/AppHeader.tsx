@@ -46,7 +46,7 @@ export function AppHeader({
   );
 
   return (
-    <header className="h-16 shrink-0 border-b border-border bg-card/60 backdrop-blur-sm sticky top-0 z-20">
+    <header className="h-16 shrink-0 border-b border-border bg-card sticky top-0 z-20 shadow-sm">
       <div className="h-full px-4 md:px-5 flex items-center gap-2">
 
         {/* Mobile hamburger — workspace only */}

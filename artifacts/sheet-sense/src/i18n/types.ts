@@ -231,6 +231,8 @@ export type Translations = {
   };
   footer: {
     text: string;
+    privacyTitle: string;
+    privacyDesc: string;
   };
   tabs: {
     overview: string;

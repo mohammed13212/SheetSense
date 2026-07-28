@@ -1,0 +1,95 @@
+I want to improve the Home page experience before adding more features.
+
+The goal is to make SheetSense feel like a polished SaaS product.
+
+========================================
+1. Improve the Light Theme
+========================================
+
+The Light theme currently feels flat.
+
+Please redesign it using the existing design system.
+
+Requirements:
+
+- White navbar.
+- Very light gray page background.
+- White upload card with a soft shadow.
+- Better visual separation between:
+  - Navbar
+  - Hero section
+  - Upload card
+  - Footer
+
+The page should feel clean and premium.
+
+========================================
+2. Simplify the Home Page
+========================================
+
+Do not add more sections.
+
+Keep the Home page minimal.
+
+The focus should remain on:
+
+- Product title
+- Short description
+- Upload area
+
+Avoid unnecessary content.
+
+========================================
+3. Privacy Message
+========================================
+
+Move the privacy message from the footer.
+
+Instead, place a small premium information card directly below the upload area.
+
+The card should contain:
+
+🛡️ Privacy First
+
+Your files never leave your browser.
+
+Arabic:
+
+🛡️ خصوصيتك أولًا
+
+ملفاتك لا تغادر متصفحك أبدًا.
+
+The card should be compact.
+
+Do not make it look like an error or warning.
+
+Do NOT use red.
+
+Use a calm color that inspires trust (blue, green, or another suitable color from the design system).
+
+========================================
+4. Home Page Hierarchy
+========================================
+
+The page should feel extremely simple.
+
+Users should immediately understand:
+
+1. What SheetSense does.
+2. Where to upload a file.
+3. That their files stay private.
+
+Nothing else should compete for attention.
+
+========================================
+5. Overall Goal
+========================================
+
+The first impression should communicate:
+
+- Simple
+- Professional
+- Private
+- Fast
+
+The page should feel similar to modern SaaS products, with strong visual hierarchy and minimal clutter.

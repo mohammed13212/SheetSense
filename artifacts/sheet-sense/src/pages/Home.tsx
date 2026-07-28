@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DropZone } from "@/components/DropZone";
 import { AppHeader } from "@/components/AppHeader";
@@ -84,13 +84,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* ── Footer — only on the hero screen ── */}
-      {!inWorkspace && (
-        <footer className="shrink-0 border-t border-border h-14 flex items-center justify-center">
-          <p className="text-sm text-muted-foreground">{t.footer.text}</p>
-        </footer>
-      )}
-
       {/* ── Floating theme toggle — always visible, bottom-right ── */}
       <FloatingThemeToggle />
     </div>
@@ -157,6 +150,13 @@ function HeroUpload({ onUploadSuccess }: HeroUploadProps) {
         isLoading={isLoading}
         error={error}
       />
+
+      {/* Privacy assurance card */}
+      <div className="mt-4 flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-primary/5 border border-primary/15 text-sm">
+        <ShieldCheck className="w-4 h-4 shrink-0 text-primary" />
+        <span className="font-medium text-primary/90">{t.footer.privacyTitle}</span>
+        <span className="text-muted-foreground">&mdash; {t.footer.privacyDesc}</span>
+      </div>
     </div>
   );
 }

@@ -277,6 +277,8 @@ const en: Translations = {
   },
   footer: {
     text: "Local-first processing. Your data never leaves your browser.",
+    privacyTitle: "Privacy First",
+    privacyDesc: "Your files never leave your browser.",
   },
   tabs: {
     overview: "Overview",
