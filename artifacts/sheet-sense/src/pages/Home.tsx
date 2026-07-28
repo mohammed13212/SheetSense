@@ -7,6 +7,7 @@ import { DatasetSidebar } from "@/components/DatasetSidebar";
 import { DatasetPanel } from "@/components/DatasetPanel";
 import { useLocale } from "@/i18n/context";
 import { useDatasets } from "@/store/DatasetContext";
+import { FloatingThemeToggle } from "@/components/FloatingThemeToggle";
 import { parseFile, FileParseError } from "@/lib/parseFile";
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -89,6 +90,9 @@ export default function Home() {
           <p className="text-sm text-muted-foreground">{t.footer.text}</p>
         </footer>
       )}
+
+      {/* ── Floating theme toggle — always visible, bottom-right ── */}
+      <FloatingThemeToggle />
     </div>
   );
 }

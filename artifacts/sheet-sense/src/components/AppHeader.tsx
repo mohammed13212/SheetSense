@@ -4,7 +4,6 @@ import { BarChart2, GitBranch, LayoutDashboard, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocale } from "@/i18n/context";
 import { LanguageSwitcher } from "./LanguageSwitcher";
-import { ThemeToggle } from "./ThemeToggle";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -92,7 +91,6 @@ export function AppHeader({
 
         {/* ── Right side controls ── */}
         <div className="ms-auto flex items-center gap-2">
-          <ThemeToggle />
           <LanguageSwitcher />
 
           {/* Log In + Sign Up — landing only */}
