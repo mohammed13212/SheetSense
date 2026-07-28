@@ -48,7 +48,9 @@ export function DropZone({ onFilesAccepted, isLoading, error }: DropZoneProps) {
 
   return (
     <div className="w-full max-w-2xl mx-auto flex flex-col gap-4">
-      {/* Drop Target */}
+      {/* Drop Target — wrapped in a shadow lifter so the white card pops off
+          the gray page background in light mode; dark mode uses its own depth. */}
+      <div className="rounded-2xl shadow-lg dark:shadow-md">
       <div
         data-testid="drop-zone"
         onDragOver={handleDragOver}
@@ -59,7 +61,7 @@ export function DropZone({ onFilesAccepted, isLoading, error }: DropZoneProps) {
           "relative group overflow-hidden rounded-2xl border-2 border-dashed transition-all duration-300 ease-out flex flex-col items-center justify-center min-h-[200px] p-6 cursor-pointer select-none",
           isDragOver
             ? "border-primary bg-primary/5 scale-[1.02]"
-            : "border-border/60 bg-card hover:border-primary/50 hover:bg-muted/30",
+            : "border-border bg-card hover:border-primary/50 hover:bg-muted/30",
           isLoading && "pointer-events-none opacity-80",
           error && "border-destructive/50 bg-destructive/5",
         )}
@@ -112,6 +114,7 @@ export function DropZone({ onFilesAccepted, isLoading, error }: DropZoneProps) {
             "dark:bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+PHBhdGggZD0iTTAgMjBoMjBWMEgweiIgZmlsbD0ibm9uZSIvPPHBhdGggZD0iTTAgMTkuNWgyMFYwIiBzdHJva2U9IiMzNzQxNTEiIHN0cm9rZS13aWR0aD0iMSIgZmlsbD0ibm9uZSIvPjwvc3ZnPg==')]",
           )}
         />
+      </div>
       </div>
 
       {error && (

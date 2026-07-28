@@ -59,7 +59,7 @@ export default function Home() {
         </div>
       ) : (
         /* ── Hero ── */
-        <div className="flex flex-col flex-1 min-h-0 items-center justify-center">
+        <div className="hero-glow flex flex-col flex-1 min-h-0 items-center justify-center">
           {/* "Back to workspace" banner — shown when datasets already exist */}
           {hasDatasets && (
             <div className="w-full max-w-2xl mx-auto px-4 mb-4">
@@ -135,9 +135,9 @@ function HeroUpload({ onUploadSuccess }: HeroUploadProps) {
 
   return (
     <div className={cn(
-      "flex flex-col items-center justify-center px-4 py-6 animate-in fade-in duration-500 w-full max-w-2xl mx-auto",
+      "flex flex-col items-center justify-center px-4 py-8 animate-in fade-in duration-500 w-full max-w-2xl mx-auto",
     )}>
-      <div className="text-center mb-6 space-y-2.5">
+      <div className="text-center mb-8 space-y-3">
         <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground">
           {t.hero.heading}
         </h2>

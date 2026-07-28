@@ -104,36 +104,36 @@
   --elevate-2:                     rgba(0, 0, 0, 0.07);
 
   /* ── Surfaces ── */
-  --background:                    220 20% 96%;    /* #F1F4F8 — cool-gray, lets white cards pop */
+  --background:                    220 16% 92%;    /* #E7ECF2 — cool gray, creates real contrast with white cards */
   --foreground:                    222 47% 11%;    /* #0F172A */
-  --border:                        214 28% 88%;    /* #D8E0EA — slightly stronger for daylight */
-  --input:                         214 28% 88%;
+  --border:                        214 22% 82%;    /* #C8D3DF — visible border in daylight */
+  --input:                         214 22% 82%;
   --ring:                          217 91% 60%;    /* #3B82F6 */
 
   /* ── Card / surface ── */
-  --card:                          0 0% 100%;      /* #FFFFFF  */
+  --card:                          0 0% 100%;      /* #FFFFFF — clean white lifts off gray page */
   --card-foreground:               222 47% 11%;    /* #0F172A  */
-  --card-border:                   214 28% 88%;    /* matches --border */
+  --card-border:                   214 22% 82%;    /* matches --border */
 
   /* ── Popover ── */
   --popover:                       0 0% 100%;
   --popover-foreground:            222 47% 11%;
-  --popover-border:                214 32% 91%;
+  --popover-border:                214 22% 82%;
 
   /* ── Primary — brand blue #3B82F6 ── */
   --primary:                       217 91% 60%;
   --primary-foreground:            0 0% 100%;
 
   /* ── Secondary ── */
-  --secondary:                     210 40% 96%;    /* #F1F5F9 slate-100 */
+  --secondary:                     214 20% 88%;    /* distinct from background, used for hover states */
   --secondary-foreground:          222 47% 11%;
 
   /* ── Muted ── */
-  --muted:                         210 40% 96%;    /* #F1F5F9 */
-  --muted-foreground:              215 16% 47%;    /* #64748B slate-500 */
+  --muted:                         214 18% 90%;    /* between background and card — clearly layered */
+  --muted-foreground:              215 18% 42%;    /* #5A6A7E — slightly darker for readability on white */
 
   /* ── Accent ── */
-  --accent:                        210 40% 96%;
+  --accent:                        214 18% 90%;
   --accent-foreground:             222 47% 11%;
 
   /* ── Destructive / error #EF4444 ── */
@@ -147,12 +147,12 @@
   --warning-foreground:            222 47% 11%;    /* dark text on amber */
 
   /* ── Sidebar ── */
-  --sidebar:                       210 40% 98%;
+  --sidebar:                       0 0% 100%;      /* white sidebar, elevated above gray page */
   --sidebar-foreground:            222 47% 11%;
-  --sidebar-border:                214 32% 91%;
+  --sidebar-border:                214 22% 82%;    /* matches --border */
   --sidebar-primary:               217 91% 60%;
   --sidebar-primary-foreground:    0 0% 100%;
-  --sidebar-accent:                210 40% 96%;
+  --sidebar-accent:                214 18% 90%;
   --sidebar-accent-foreground:     222 47% 11%;
   --sidebar-ring:                  217 91% 60%;
 
@@ -172,15 +172,15 @@
   --radius:   0.5rem;   /* 8px base */
   --spacing:  0.25rem;  /* 4px grid */
 
-  /* ── Shadows (light — stronger so cards lift off the gray page) ── */
-  --shadow-2xs: 0 1px 3px hsl(215 30% 35% / 0.08);
-  --shadow-xs:  0 1px 3px hsl(215 30% 35% / 0.10);
-  --shadow-sm:  0 1px 4px hsl(215 30% 35% / 0.12), 0 1px 2px hsl(215 30% 35% / 0.08);
-  --shadow:     0 2px 6px hsl(215 30% 35% / 0.12), 0 1px 3px hsl(215 30% 35% / 0.08);
-  --shadow-md:  0 4px 10px hsl(215 30% 35% / 0.10), 0 2px 4px hsl(215 30% 35% / 0.07);
-  --shadow-lg:  0 10px 20px hsl(215 30% 35% / 0.10), 0 4px 8px hsl(215 30% 35% / 0.06);
-  --shadow-xl:  0 20px 30px hsl(215 30% 35% / 0.09), 0 8px 12px hsl(215 30% 35% / 0.06);
-  --shadow-2xl: 0 25px 50px hsl(215 30% 35% / 0.12);
+  /* ── Shadows (light — premium card elevation against gray background) ── */
+  --shadow-2xs: 0 1px 2px hsl(215 30% 30% / 0.08);
+  --shadow-xs:  0 1px 3px hsl(215 30% 30% / 0.10);
+  --shadow-sm:  0 1px 3px hsl(215 30% 30% / 0.10), 0 1px 2px hsl(215 30% 30% / 0.06);
+  --shadow:     0 2px 8px hsl(215 30% 30% / 0.11), 0 1px 3px hsl(215 30% 30% / 0.07);
+  --shadow-md:  0 4px 14px hsl(215 30% 30% / 0.12), 0 2px 5px hsl(215 30% 30% / 0.08);
+  --shadow-lg:  0 8px 28px hsl(215 30% 30% / 0.13), 0 4px 10px hsl(215 30% 30% / 0.08);
+  --shadow-xl:  0 20px 40px hsl(215 30% 30% / 0.12), 0 8px 16px hsl(215 30% 30% / 0.08);
+  --shadow-2xl: 0 28px 56px hsl(215 30% 30% / 0.15);
 
   /* ── Computed button/badge border tints ── */
   --primary-border:         hsl(from hsl(var(--primary))     h s calc(l + var(--opaque-button-border-intensity)) / alpha);
@@ -311,6 +311,18 @@ html[lang="ar"] {
 /* ─── Utilities ──────────────────────────────────────────────────────────────
    Elevation helpers used by button.tsx and interactive components.
    ────────────────────────────────────────────────────────────────────────── */
+/* ─── Light-mode hero focal glow ────────────────────────────────────────────
+   A soft radial gradient behind the hero section that anchors the heading
+   visually in light mode. Disabled in dark mode (background is already rich). */
+.hero-glow {
+  background-image: radial-gradient(
+    ellipse 100% 70% at 50% 0%,
+    hsl(var(--primary) / 0.07) 0%,
+    transparent 68%
+  );
+}
+.dark .hero-glow { background-image: none; }
+
 @layer utilities {
   input[type='search']::-webkit-search-cancel-button {
     @apply hidden;
