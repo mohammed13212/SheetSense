@@ -8,6 +8,7 @@ import { OverviewTab }     from "@/components/tabs/OverviewTab";
 import { InsightsTab }     from "@/components/tabs/InsightsTab";
 import { ChartsTab }       from "@/components/tabs/ChartsTab";
 import { DataPreviewTab }  from "@/components/tabs/DataPreviewTab";
+import { SummaryCard }     from "@/components/SummaryCard";
 import type { Dataset } from "@/types";
 
 // ─── Tab definition ───────────────────────────────────────────────────────────
@@ -121,6 +122,9 @@ export function DatasetPanel({ dataset }: DatasetPanelProps) {
 
       {/* ── Tab content ── */}
       <div className="flex-1 overflow-y-auto min-h-0">
+        {/* Summary card — always visible above tab content */}
+        {file.dataQuality && <SummaryCard file={file} />}
+
         {activeTab === "overview" && (
           <OverviewTab
             file={file}
