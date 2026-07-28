@@ -9,6 +9,8 @@ const ar: Translations = {
     relationships: "مدير العلاقات",
     themeLight: "فاتح",
     themeDark: "داكن",
+    logIn: "تسجيل الدخول",
+    signUp: "إنشاء حساب",
   },
   hero: {
     heading: "حلّل ملفات Excel و CSV في ثوانٍ.",

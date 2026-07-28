@@ -9,6 +9,8 @@ const en: Translations = {
     relationships: "Relationships",
     themeLight: "Light",
     themeDark: "Dark",
+    logIn: "Log In",
+    signUp: "Sign Up",
   },
   hero: {
     heading: "Analyze Excel & CSV files in seconds.",

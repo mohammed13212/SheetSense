@@ -9,19 +9,29 @@ import { ThemeToggle } from "./ThemeToggle";
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface AppHeaderProps {
-  /** Render the mobile hamburger button and fire this callback when clicked. */
+  /**
+   * When true the header is in workspace mode:
+   *   - Shows the Workspace + Relationships nav links
+   *   - Shows the mobile hamburger button (when onMenuClick is provided)
+   *   - Logo fires onLogoClick instead of navigating
+   * When false (default) the header is in landing mode:
+   *   - Shows Log In + Sign Up CTA buttons
+   *   - No hamburger
+   */
+  isInWorkspace?: boolean;
   showMenuButton?: boolean;
   onMenuClick?: () => void;
-  /**
-   * When provided, the logo fires this callback instead of navigating.
-   * Used by the Home page to return to the hero/landing view without a route change.
-   */
   onLogoClick?: () => void;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function AppHeader({ showMenuButton, onMenuClick, onLogoClick }: AppHeaderProps) {
+export function AppHeader({
+  isInWorkspace = false,
+  showMenuButton,
+  onMenuClick,
+  onLogoClick,
+}: AppHeaderProps) {
   const { t } = useLocale();
   const [location] = useLocation();
 
@@ -39,8 +49,9 @@ export function AppHeader({ showMenuButton, onMenuClick, onLogoClick }: AppHeade
   return (
     <header className="h-16 shrink-0 border-b border-border bg-card/60 backdrop-blur-sm sticky top-0 z-20">
       <div className="h-full px-4 md:px-5 flex items-center gap-2">
-        {/* Mobile hamburger */}
-        {showMenuButton && onMenuClick && (
+
+        {/* Mobile hamburger — workspace only */}
+        {isInWorkspace && showMenuButton && onMenuClick && (
           <button
             onClick={onMenuClick}
             aria-label={t.datasets.openSidebar}
@@ -65,22 +76,44 @@ export function AppHeader({ showMenuButton, onMenuClick, onLogoClick }: AppHeade
           </Link>
         )}
 
-        {/* Primary navigation */}
-        <nav className="ms-3 flex items-center gap-0.5" aria-label="Main navigation">
-          <NavLink href="/" active={location === "/"}>
-            <LayoutDashboard className="w-3.5 h-3.5 shrink-0" />
-            <span className="hidden sm:inline">{t.nav.workspace}</span>
-          </NavLink>
-          <NavLink href="/relationships" active={location === "/relationships"}>
-            <GitBranch className="w-3.5 h-3.5 shrink-0" />
-            <span className="hidden sm:inline">{t.nav.relationships}</span>
-          </NavLink>
-        </nav>
+        {/* ── Workspace nav ── */}
+        {isInWorkspace && (
+          <nav className="ms-3 flex items-center gap-0.5" aria-label="Main navigation">
+            <NavLink href="/" active={location === "/"}>
+              <LayoutDashboard className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden sm:inline">{t.nav.workspace}</span>
+            </NavLink>
+            <NavLink href="/relationships" active={location === "/relationships"}>
+              <GitBranch className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden sm:inline">{t.nav.relationships}</span>
+            </NavLink>
+          </nav>
+        )}
 
+        {/* ── Right side controls ── */}
         <div className="ms-auto flex items-center gap-2">
           <ThemeToggle />
           <LanguageSwitcher />
+
+          {/* Log In + Sign Up — landing only */}
+          {!isInWorkspace && (
+            <div className="flex items-center gap-2 ms-1">
+              <Link
+                href="/login"
+                className="px-3.5 py-1.5 rounded-lg text-sm font-medium text-foreground hover:bg-muted transition-colors border border-border"
+              >
+                {t.nav.logIn}
+              </Link>
+              <Link
+                href="/signup"
+                className="px-3.5 py-1.5 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:opacity-90 transition-opacity shadow-sm"
+              >
+                {t.nav.signUp}
+              </Link>
+            </div>
+          )}
         </div>
+
       </div>
     </header>
   );

@@ -30,6 +30,7 @@ export default function Home() {
     >
       {/* ── Header ── */}
       <AppHeader
+        isInWorkspace={inWorkspace}
         showMenuButton={inWorkspace}
         onMenuClick={() => setSidebarOpen(true)}
         // From the workspace, clicking the logo clears all datasets and returns

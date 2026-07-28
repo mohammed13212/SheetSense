@@ -20,6 +20,8 @@ export type Translations = {
     relationships: string;
     themeLight: string;
     themeDark: string;
+    logIn: string;
+    signUp: string;
   };
   hero: {
     heading: string;

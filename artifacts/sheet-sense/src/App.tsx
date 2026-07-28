@@ -5,6 +5,8 @@ import NotFound from "@/pages/not-found";
 import { Route, Switch, Router as WouterRouter } from "wouter";
 import Home from "@/pages/Home";
 import RelationshipManager from "@/pages/RelationshipManager";
+import Login from "@/pages/Login";
+import Signup from "@/pages/Signup";
 import { LocaleProvider } from "@/i18n/context";
 import { DatasetProvider } from "@/store/DatasetContext";
 import { ThemeProvider } from "@/store/ThemeContext";
@@ -16,6 +18,8 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/relationships" component={RelationshipManager} />
+      <Route path="/login" component={Login} />
+      <Route path="/signup" component={Signup} />
       <Route component={NotFound} />
     </Switch>
   );
