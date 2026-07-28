@@ -4,6 +4,14 @@
  * To swap in a real AI service, create a new function that satisfies
  * `InsightEngine` and pass it as the `engine` prop to <Insights />.
  * The UI never needs to change.
+ *
+ * Design principle: insights are practical RECOMMENDATIONS, not quality checks.
+ * Quality checks (missing values, duplicates, etc.) belong in the Summary Card.
+ * Here we only surface:
+ *   1. Actionable warnings — emitted only when the problem is actually present
+ *   2. Size observations — only when dataset size is notably small or large
+ *   3. Next-step recommendations — what the user should DO with this data
+ *   4. A single readiness verdict — one of: ready / mostly ready / needs cleaning
  */
 
 import type { DataQuality } from "@/types";
@@ -40,116 +48,66 @@ export type InsightEngine = (
 
 // ─── Rule-based engine ────────────────────────────────────────────────────────
 
-export const ruleBasedEngine: InsightEngine = async (quality, meta, t) => {
+export const ruleBasedEngine: InsightEngine = async (quality, _meta, t) => {
   const r = t.insights.rules;
   const insights: Insight[] = [];
 
-  // ── Missing values ──────────────────────────────────────────────────────────
-  if (quality.missingPercent === 0) {
-    insights.push({
-      id: "no-missing",
-      kind: "success",
-      title: r.noMissingValues.title,
-      description: r.noMissingValues.desc,
-    });
-  } else if (quality.missingPercent <= 5) {
-    insights.push({
-      id: "minor-missing",
-      kind: "warning",
-      title: r.minorMissing.title,
-      description: tpl(r.minorMissing.desc, {
-        pct: quality.missingPercent.toFixed(1),
-      }),
-    });
-  } else if (quality.missingPercent <= 20) {
-    insights.push({
-      id: "significant-missing",
-      kind: "warning",
-      title: r.significantMissing.title,
-      description: tpl(r.significantMissing.desc, {
-        pct: quality.missingPercent.toFixed(1),
-        count: quality.missingValues.toLocaleString(),
-      }),
-    });
-  } else {
+  // ── Section 1: Actionable data quality warnings ────────────────────────────
+  // These are emitted only when the problem is actually present.
+  // "No missing values" and "no duplicates" are NOT surfaced here —
+  // those confirmations belong in the Summary Card, not Insights.
+
+  if (quality.missingPercent > 20) {
     insights.push({
       id: "high-missing",
       kind: "warning",
       title: r.highMissing.title,
       description: tpl(r.highMissing.desc, {
-        pct: quality.missingPercent.toFixed(1),
+        pct:   quality.missingPercent.toFixed(1),
         count: quality.missingValues.toLocaleString(),
       }),
     });
+  } else if (quality.missingPercent > 5) {
+    insights.push({
+      id: "significant-missing",
+      kind: "warning",
+      title: r.significantMissing.title,
+      description: tpl(r.significantMissing.desc, {
+        pct:   quality.missingPercent.toFixed(1),
+        count: quality.missingValues.toLocaleString(),
+      }),
+    });
+  } else if (quality.missingPercent > 0) {
+    insights.push({
+      id: "minor-missing",
+      kind: "warning",
+      title: r.minorMissing.title,
+      description: tpl(r.minorMissing.desc, { pct: quality.missingPercent.toFixed(1) }),
+    });
   }
 
-  // ── Duplicate rows ──────────────────────────────────────────────────────────
-  if (quality.duplicateRows === 0) {
-    insights.push({
-      id: "no-duplicates",
-      kind: "success",
-      title: r.noDuplicates.title,
-      description: r.noDuplicates.desc,
-    });
-  } else {
+  if (quality.duplicateRows > 0) {
     insights.push({
       id: "duplicates-found",
       kind: "warning",
       title: r.duplicatesFound.title,
-      description: tpl(r.duplicatesFound.desc, {
-        count: quality.duplicateRows.toLocaleString(),
-      }),
+      description: tpl(r.duplicatesFound.desc, { count: quality.duplicateRows.toLocaleString() }),
     });
   }
 
-  // ── Empty columns ───────────────────────────────────────────────────────────
   if (quality.emptyColumns > 0) {
     insights.push({
       id: "empty-columns",
       kind: "warning",
       title: r.emptyColumnsFound.title,
-      description: tpl(r.emptyColumnsFound.desc, {
-        count: quality.emptyColumns.toLocaleString(),
-      }),
+      description: tpl(r.emptyColumnsFound.desc, { count: quality.emptyColumns.toLocaleString() }),
     });
   }
 
-  // ── Column types ────────────────────────────────────────────────────────────
-  if (quality.numericColumns > 0) {
-    insights.push({
-      id: "numeric-available",
-      kind: "info",
-      title: r.numericAvailable.title,
-      description: tpl(r.numericAvailable.desc, {
-        count: quality.numericColumns.toLocaleString(),
-      }),
-    });
-  }
-
-  if (quality.textColumns > 0) {
-    insights.push({
-      id: "text-available",
-      kind: "info",
-      title: r.textAvailable.title,
-      description: tpl(r.textAvailable.desc, {
-        count: quality.textColumns.toLocaleString(),
-      }),
-    });
-  }
-
-  // ── Mixed column types ──────────────────────────────────────────────────────
-  if (quality.numericColumns > 0 && quality.textColumns > 0) {
-    insights.push({
-      id: "mixed-dataset",
-      kind: "info",
-      title: r.mixedDataset.title,
-      description: r.mixedDataset.desc,
-    });
-  }
-
-  // ── Dataset size ────────────────────────────────────────────────────────────
+  // ── Section 2: Size observations ──────────────────────────────────────────
   const dataRows = quality.totalDataRows;
-  if (dataRows < 10 && dataRows > 0) {
+
+  if (dataRows > 0 && dataRows < 10) {
     insights.push({
       id: "small-dataset",
       kind: "info",
@@ -165,27 +123,59 @@ export const ruleBasedEngine: InsightEngine = async (quality, meta, t) => {
     });
   }
 
-  // ── Overall quality verdict ─────────────────────────────────────────────────
-  if (quality.qualityScore >= 80) {
+  // ── Section 3: Practical next-step recommendations ────────────────────────
+  const hasNumeric = quality.numericColumns > 0;
+  const hasText    = quality.textColumns    > 0;
+
+  if (hasNumeric && !hasText) {
+    insights.push({
+      id: "numeric-dataset",
+      kind: "info",
+      title: r.numericDataset.title,
+      description: tpl(r.numericDataset.desc, { count: quality.numericColumns.toLocaleString() }),
+    });
+  } else if (hasNumeric && hasText) {
+    insights.push({
+      id: "categorical-possible",
+      kind: "info",
+      title: r.categoricalPossible.title,
+      description: r.categoricalPossible.desc,
+    });
+  } else if (!hasNumeric && hasText) {
+    insights.push({
+      id: "text-only-dataset",
+      kind: "info",
+      title: r.textOnlyDataset.title,
+      description: r.textOnlyDataset.desc,
+    });
+  }
+
+  // ── Section 4: Readiness verdict — exactly one fires ─────────────────────
+  const hasWarnings = insights.some((i) => i.kind === "warning");
+
+  if (!hasWarnings && quality.qualityScore >= 80) {
+    // Clean dataset, no issues — celebrate and direct the user to Charts
     insights.push({
       id: "ready-for-viz",
       kind: "success",
       title: r.readyForViz.title,
-      description: tpl(r.readyForViz.desc, { score: String(quality.qualityScore) }),
+      description: r.readyForViz.desc,
     });
   } else if (quality.qualityScore >= 50) {
+    // Usable but imperfect
     insights.push({
-      id: "needs-minor-cleaning",
+      id: "ready-with-issues",
       kind: "info",
-      title: r.needsMinorCleaning.title,
-      description: tpl(r.needsMinorCleaning.desc, { score: String(quality.qualityScore) }),
+      title: r.readyWithIssues.title,
+      description: r.readyWithIssues.desc,
     });
   } else {
+    // Score too low — cleaning should come first
     insights.push({
       id: "needs-cleaning",
       kind: "warning",
       title: r.needsCleaning.title,
-      description: tpl(r.needsCleaning.desc, { score: String(quality.qualityScore) }),
+      description: r.needsCleaning.desc,
     });
   }
 

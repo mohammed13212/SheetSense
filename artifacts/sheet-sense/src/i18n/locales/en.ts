@@ -60,6 +60,7 @@ const en: Translations = {
     totalSheets: "Total Sheets",
     rows: "Rows (Sheet 1)",
     columns: "Columns (Sheet 1)",
+    numericCols: "Numeric Columns",
   },
   quality: {
     sectionTitle: "Data Quality Dashboard",
@@ -138,65 +139,61 @@ const en: Translations = {
       info: "Info",
     },
     rules: {
-      noMissingValues: {
-        title: "No Missing Values Detected",
-        desc: "Every cell in your dataset contains a value. Your data is complete and ready for analysis.",
-      },
+      // Issues — emitted only when the problem is present
       minorMissing: {
         title: "Minor Missing Data",
-        desc: "{pct}% of cells are empty. Consider filling these gaps for the most accurate results.",
+        desc: "{pct}% of cells are empty. Consider filling these gaps before running analysis.",
       },
       significantMissing: {
         title: "Significant Missing Data",
-        desc: "{pct}% of cells ({count} total) are blank. Review and impute or remove affected rows before analysis.",
+        desc: "{pct}% of cells ({count} values) are blank. Impute or remove affected rows before analysis.",
       },
       highMissing: {
         title: "High Missing Data Rate",
-        desc: "{pct}% of cells ({count} total) have no value. This level of incompleteness will significantly affect any analysis.",
-      },
-      noDuplicates: {
-        title: "No Duplicate Rows Found",
-        desc: "All rows are unique. No deduplication step is needed before proceeding.",
+        desc: "{pct}% of cells ({count} values) are missing. This will significantly affect any analysis or chart.",
       },
       duplicatesFound: {
-        title: "Duplicate Rows Should Be Reviewed",
-        desc: "{count} rows are exact duplicates of other rows. Remove them to avoid inflated counts and skewed aggregations.",
+        title: "Duplicate Rows Detected",
+        desc: "{count} rows are exact duplicates. Remove them to avoid inflated counts and skewed aggregations.",
       },
       emptyColumnsFound: {
-        title: "Empty Columns Can Be Removed",
-        desc: "{count} column(s) contain no data at all. Dropping them will reduce noise and file size.",
+        title: "Empty Columns Detected",
+        desc: "{count} column(s) contain no data. Dropping them will reduce noise.",
       },
-      numericAvailable: {
-        title: "Numeric Columns Ready for Charts",
-        desc: "{count} numeric column(s) detected. These are suitable for bar charts, line graphs, scatter plots, and statistical summaries.",
-      },
-      textAvailable: {
-        title: "Text Columns Suitable for Categorical Analysis",
-        desc: "{count} text column(s) detected. Use them for grouping, filtering, pivot tables, or frequency analysis.",
-      },
-      mixedDataset: {
-        title: "Mixed Dataset — Great for Cross-Analysis",
-        desc: "Your dataset contains both numeric and text columns, making it well-suited for dimensional analysis and dashboards.",
-      },
+      // Size observations
       smallDataset: {
-        title: "Small Dataset",
-        desc: "Only {count} data rows found. Statistical conclusions from this dataset may have limited significance — consider gathering more data.",
+        title: "Very Small Dataset",
+        desc: "Only {count} data rows found. Statistical conclusions may have limited reliability — consider gathering more data.",
       },
       largeDataset: {
-        title: "Large Dataset Detected",
-        desc: "{count} rows found. Consider sampling a subset for exploratory analysis to keep things fast and manageable.",
+        title: "Large Dataset",
+        desc: "{count} rows detected. Consider filtering to a focused subset before building charts for better performance.",
       },
+      // Practical next-step recommendations
+      numericDataset: {
+        title: "Numeric Dataset — Charts Ready",
+        desc: "All {count} columns are numeric. This dataset is well-suited for bar charts, line graphs, scatter plots, and statistical summaries.",
+      },
+      categoricalPossible: {
+        title: "Category Analysis Possible",
+        desc: "Your dataset has both numeric and text columns. Use text columns to group and filter — combine them with numeric columns to build meaningful category-based charts.",
+      },
+      textOnlyDataset: {
+        title: "Text-Heavy Dataset",
+        desc: "Most columns contain text. Consider frequency counts or category grouping before visualizing.",
+      },
+      // Readiness verdict — exactly one fires per dataset
       readyForViz: {
-        title: "Dataset Is Ready for Visualization",
-        desc: "With a quality score of {score}/100, your data is in excellent shape. Proceed confidently to charts and reports.",
+        title: "Ready for Visualization",
+        desc: "This dataset is clean and ready. Head to the Charts tab to start building dashboards and reports.",
       },
-      needsMinorCleaning: {
-        title: "Minor Improvements Recommended",
-        desc: "Your quality score is {score}/100 — good, but addressing the warnings above will improve analysis reliability.",
+      readyWithIssues: {
+        title: "Mostly Ready — Issues Flagged",
+        desc: "Your dataset can be visualized, but addressing the issues above will improve accuracy.",
       },
       needsCleaning: {
-        title: "Data Cleaning Recommended Before Analysis",
-        desc: "Your quality score is {score}/100. Resolving the issues above will significantly improve the accuracy of any downstream analysis.",
+        title: "Data Cleaning Recommended",
+        desc: "Resolve the issues above before running analysis — they may affect the accuracy of charts and summaries.",
       },
     },
   },
@@ -288,6 +285,7 @@ const en: Translations = {
     topInsights: "Key Findings",
     viewAllInsights: "View all",
     noInsights: "No insights yet.",
+    insightsEmpty: "No outstanding issues or recommendations for this dataset.",
     viewDetails: "View details",
     hideDetails: "Hide",
     searchPlaceholder: "Search rows…",

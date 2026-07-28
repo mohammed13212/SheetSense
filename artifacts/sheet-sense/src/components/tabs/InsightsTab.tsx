@@ -91,6 +91,15 @@ export function InsightsTab({ insights, status, onRegenerate }: InsightsTabProps
       {/* Content */}
       {isLoading ? (
         <LoadingSkeleton />
+      ) : insights.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-14 gap-3 text-center">
+          <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center">
+            <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+          </div>
+          <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
+            {t.tabs.insightsEmpty}
+          </p>
+        </div>
       ) : (
         <div className="flex flex-col gap-2">
           {insights.map((insight, i) => (

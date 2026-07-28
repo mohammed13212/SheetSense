@@ -4,7 +4,6 @@ import { cn } from "@/lib/utils";
 import { useLocale } from "@/i18n/context";
 import type { ParsedFile } from "@/types";
 import type { Insight, InsightKind } from "@/lib/insights";
-
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface OverviewTabProps {
@@ -23,7 +22,7 @@ export function OverviewTab({
   onViewAllInsights,
 }: OverviewTabProps) {
   const { t } = useLocale();
-  const score = file.dataQuality?.qualityScore ?? null;
+  const dq      = file.dataQuality;
   const dataRows = Math.max(0, file.rowCount - 1);
   const topInsights = insights.slice(0, 3);
 
@@ -39,24 +38,10 @@ export function OverviewTab({
           label={t.fileStats.columns}
           value={file.colCount.toLocaleString()}
         />
-        {score !== null ? (
-          <div className="bg-card border border-border rounded-xl p-4 flex items-center gap-4">
-            <ScoreRing score={score} />
-            <div className="min-w-0">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                {t.quality.overallScore}
-              </p>
-              <p className="text-xl font-bold text-foreground leading-tight mt-0.5">
-                {score}
-                <span className="text-sm font-normal text-muted-foreground">
-                  /100
-                </span>
-              </p>
-            </div>
-          </div>
-        ) : (
-          <StatTile label={t.quality.overallScore} value="—" />
-        )}
+        <StatTile
+          label={t.fileStats.numericCols}
+          value={dq ? dq.numericColumns.toLocaleString() : "—"}
+        />
       </div>
 
       {/* ── Key findings ── */}

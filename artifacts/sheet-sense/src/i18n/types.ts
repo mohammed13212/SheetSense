@@ -72,6 +72,7 @@ export type Translations = {
     totalSheets: string;
     rows: string;
     columns: string;
+    numericCols: string;
   };
   quality: {
     sectionTitle: string;
@@ -124,27 +125,23 @@ export type Translations = {
       info: string;
     };
     rules: {
-      // Missing values
-      noMissingValues: InsightRule;
+      // Issues — emitted only when the problem is present (actionable)
       minorMissing: InsightRule;        // {pct}
       significantMissing: InsightRule;  // {pct}, {count}
       highMissing: InsightRule;         // {pct}, {count}
-      // Duplicates
-      noDuplicates: InsightRule;
       duplicatesFound: InsightRule;     // {count}
-      // Empty columns
       emptyColumnsFound: InsightRule;   // {count}
-      // Column types
-      numericAvailable: InsightRule;    // {count}
-      textAvailable: InsightRule;       // {count}
-      mixedDataset: InsightRule;
-      // Dataset size
+      // Size observations
       smallDataset: InsightRule;        // {count}
       largeDataset: InsightRule;        // {count}
-      // Overall verdict
-      readyForViz: InsightRule;         // {score}
-      needsMinorCleaning: InsightRule;  // {score}
-      needsCleaning: InsightRule;       // {score}
+      // Practical next-step recommendations
+      numericDataset: InsightRule;      // {count} — numeric-only dataset
+      categoricalPossible: InsightRule; // mixed numeric + text
+      textOnlyDataset: InsightRule;     // text-only dataset
+      // Readiness verdict — exactly one fires per dataset
+      readyForViz: InsightRule;
+      readyWithIssues: InsightRule;
+      needsCleaning: InsightRule;
     };
   };
   relationships: {
@@ -242,6 +239,7 @@ export type Translations = {
     topInsights: string;
     viewAllInsights: string;
     noInsights: string;
+    insightsEmpty: string;
     viewDetails: string;
     hideDetails: string;
     searchPlaceholder: string;
