@@ -4,16 +4,14 @@ import { cn } from "@/lib/utils";
 import { useLocale } from "@/i18n/context";
 import { ruleBasedEngine } from "@/lib/insights";
 import type { Insight } from "@/lib/insights";
-import { OverviewTab }     from "@/components/tabs/OverviewTab";
-import { InsightsTab }     from "@/components/tabs/InsightsTab";
-import { ChartsTab }       from "@/components/tabs/ChartsTab";
-import { DataPreviewTab }  from "@/components/tabs/DataPreviewTab";
-import { SummaryCard }     from "@/components/SummaryCard";
+import { OverviewTab }    from "@/components/tabs/OverviewTab";
+import { ChartsTab }      from "@/components/tabs/ChartsTab";
+import { DataPreviewTab } from "@/components/tabs/DataPreviewTab";
 import type { Dataset } from "@/types";
 
 // ─── Tab definition ───────────────────────────────────────────────────────────
 
-type TabId = "overview" | "insights" | "charts" | "preview";
+type TabId = "overview" | "charts" | "preview";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -30,7 +28,7 @@ export function DatasetPanel({ dataset }: DatasetPanelProps) {
   // ── Tab state ──────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<TabId>("overview");
 
-  // ── Insights state (lifted so Overview and Insights share the same data) ──
+  // ── Insights state ────────────────────────────────────────────────────────
   const [insights, setInsights] = useState<Insight[]>([]);
   const [insightStatus, setInsightStatus] = useState<"idle" | "loading" | "done">("idle");
 
@@ -44,8 +42,7 @@ export function DatasetPanel({ dataset }: DatasetPanelProps) {
           rowCount: file.rowCount,
           colCount: file.colCount,
         }, t),
-        // Minimum perceptible delay so the loading state feels intentional
-        new Promise((r) => setTimeout(r, 600)),
+        new Promise((r) => setTimeout(r, 500)),
       ]);
       setInsights(result);
       setInsightStatus("done");
@@ -55,7 +52,6 @@ export function DatasetPanel({ dataset }: DatasetPanelProps) {
     }
   }, [file, t]);
 
-  // Auto-generate on mount and when quality or locale changes
   useEffect(() => {
     generateInsights();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -63,15 +59,14 @@ export function DatasetPanel({ dataset }: DatasetPanelProps) {
 
   // ── Tab definitions ────────────────────────────────────────────────────────
   const TABS: { id: TabId; label: string }[] = [
-    { id: "overview",  label: t.tabs.overview  },
-    { id: "insights",  label: t.tabs.insights  },
-    { id: "charts",    label: t.tabs.charts    },
-    { id: "preview",   label: t.tabs.preview   },
+    { id: "overview", label: t.tabs.overview },
+    { id: "charts",   label: t.tabs.charts   },
+    { id: "preview",  label: t.tabs.preview  },
   ];
 
   return (
     <div
-      key={dataset.id} // remount when dataset changes — resets tab + insight state
+      key={dataset.id}
       className="flex flex-col h-full animate-in fade-in duration-300"
       data-testid={`dataset-panel-${dataset.id}`}
     >
@@ -87,7 +82,7 @@ export function DatasetPanel({ dataset }: DatasetPanelProps) {
               className="text-base font-semibold text-foreground truncate leading-snug"
               title={file.fileName}
             >
-              {file.fileName}
+              {dataset.displayName ?? file.fileName}
             </h2>
             <p className="text-xs text-muted-foreground mt-px">
               {t.analysis.subtitle}
@@ -104,14 +99,14 @@ export function DatasetPanel({ dataset }: DatasetPanelProps) {
               aria-selected={activeTab === tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                "relative px-4 py-2.5 text-sm font-medium transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
+                "relative px-4 py-2.5 text-sm font-medium transition-colors duration-150",
+                "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
                 activeTab === tab.id
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
               {tab.label}
-              {/* Active underline */}
               {activeTab === tab.id && (
                 <span className="absolute bottom-0 inset-x-0 h-0.5 bg-primary rounded-t-full" />
               )}
@@ -122,21 +117,11 @@ export function DatasetPanel({ dataset }: DatasetPanelProps) {
 
       {/* ── Tab content ── */}
       <div className="flex-1 overflow-y-auto min-h-0">
-        {/* Summary card — always visible above tab content */}
-        {file.dataQuality && <SummaryCard file={file} />}
-
         {activeTab === "overview" && (
           <OverviewTab
             file={file}
             insights={insights}
-            insightsLoading={insightStatus === "loading"}
-            onViewAllInsights={() => setActiveTab("insights")}
-          />
-        )}
-        {activeTab === "insights" && (
-          <InsightsTab
-            insights={insights}
-            status={insightStatus}
+            insightStatus={insightStatus}
             onRegenerate={generateInsights}
           />
         )}

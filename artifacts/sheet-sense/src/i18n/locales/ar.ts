@@ -282,6 +282,7 @@ const ar: Translations = {
     charts: "المخططات",
     preview: "معاينة البيانات",
     topInsights: "أبرز النتائج",
+    keyStatistics: "الإحصاءات الرئيسية",
     viewAllInsights: "عرض الكل",
     noInsights: "لا توجد رؤى بعد.",
     insightsEmpty: "لا توجد مشكلات بارزة أو توصيات لهذه المجموعة.",

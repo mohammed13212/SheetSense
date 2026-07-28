@@ -283,6 +283,7 @@ const en: Translations = {
     charts: "Charts",
     preview: "Data Preview",
     topInsights: "Key Findings",
+    keyStatistics: "Key Statistics",
     viewAllInsights: "View all",
     noInsights: "No insights yet.",
     insightsEmpty: "No outstanding issues or recommendations for this dataset.",

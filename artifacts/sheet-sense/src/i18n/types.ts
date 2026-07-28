@@ -237,6 +237,7 @@ export type Translations = {
     charts: string;
     preview: string;
     topInsights: string;
+    keyStatistics: string;
     viewAllInsights: string;
     noInsights: string;
     insightsEmpty: string;
