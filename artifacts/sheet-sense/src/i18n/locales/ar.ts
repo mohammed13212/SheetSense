@@ -282,6 +282,54 @@ const ar: Translations = {
     sortAsc: "ترتيب تصاعدي",
     sortDesc: "ترتيب تنازلي",
   },
+  summary: {
+    title: "الملخص",
+    datasetHealth: "جودة مجموعة البيانات",
+    quickSummary: "ملخص سريع",
+    keyMetrics: "المقاييس الرئيسية",
+    recommendedActions: "الإجراءات الموصى بها",
+    metrics: {
+      rows: "الصفوف",
+      columns: "الأعمدة",
+      missingValues: "القيم المفقودة",
+      duplicateRows: "الصفوف المكررة",
+      qualityScore: "درجة الجودة",
+    },
+    prose: {
+      size: "تحتوي مجموعة البيانات هذه على {rows} صف و{cols} عمود.",
+      qualityExcellentClean:
+        "جودة البيانات ممتازة بدون أي قيم مفقودة أو صفوف مكررة.",
+      qualityExcellentMissing:
+        "جودة البيانات ممتازة مع {pct}% فقط من القيم المفقودة وبدون صفوف مكررة.",
+      qualityExcellentDupes:
+        "جودة البيانات ممتازة بدون قيم مفقودة ومع {count} صف مكرر.",
+      qualityExcellentBoth:
+        "جودة البيانات ممتازة مع {pct}% من القيم المفقودة و{count} صف مكرر.",
+      qualityGood: "جودة البيانات جيدة بدرجة {score}/100.",
+      qualityFair:
+        "جودة البيانات مقبولة ({score}/100). تم اكتشاف عدة مشكلات ينبغي معالجتها قبل التحليل.",
+      qualityPoor:
+        "جودة البيانات ضعيفة ({score}/100). يُنصح بإجراء تنظيف شامل قبل المتابعة.",
+      compositionMixed:
+        "تحتوي على {numeric} عمود رقمي و{text} عمود نصي، مما يدعم التحليل الإحصائي والفئوي.",
+      compositionNumericOnly:
+        "جميع الأعمدة الـ{numeric} رقمية، مما يجعلها مناسبة للتحليل الإحصائي.",
+      compositionTextOnly:
+        "مجموعة البيانات فئوية بالكامل مع {text} عمود نصي.",
+      closingReady: "مجموعة البيانات جاهزة للتحليل والتصور.",
+      closingGood:
+        "معالجة المشكلات المكتشفة ستحسّن موثوقية تحليلك.",
+      closingPoor:
+        "راجع البيانات ونظّفها قبل استخلاص أي استنتاجات منها.",
+    },
+    actions: {
+      duplicates: "أزِل {count} صف مكرر لتجنب النتائج المنحرفة.",
+      missing: "عالج أو أزِل {count} قيمة مفقودة ({pct}% من جميع الخلايا).",
+      emptyColumns:
+        "احذف أو افحص {count} عمود فارغ — لا تُضيف أي بيانات.",
+      noAction: "لا يلزم اتخاذ أي إجراء. مجموعة البيانات جاهزة للتحليل.",
+    },
+  },
 };
 
 export default ar;

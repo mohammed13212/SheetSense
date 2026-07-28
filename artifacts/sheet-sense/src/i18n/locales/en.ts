@@ -283,6 +283,53 @@ const en: Translations = {
     sortAsc: "Sort ascending",
     sortDesc: "Sort descending",
   },
+  summary: {
+    title: "Summary",
+    datasetHealth: "Dataset Health",
+    quickSummary: "Quick Summary",
+    keyMetrics: "Key Metrics",
+    recommendedActions: "Recommended Actions",
+    metrics: {
+      rows: "Rows",
+      columns: "Columns",
+      missingValues: "Missing Values",
+      duplicateRows: "Duplicate Rows",
+      qualityScore: "Quality Score",
+    },
+    prose: {
+      size: "This dataset contains {rows} rows and {cols} columns.",
+      qualityExcellentClean:
+        "The data quality is excellent with no missing values and no duplicate records.",
+      qualityExcellentMissing:
+        "The data quality is excellent with only {pct}% missing values and no duplicate records.",
+      qualityExcellentDupes:
+        "The data quality is excellent with no missing values and {count} duplicate rows.",
+      qualityExcellentBoth:
+        "The data quality is excellent with {pct}% missing values and {count} duplicate rows.",
+      qualityGood: "The data quality is good with a score of {score}/100.",
+      qualityFair:
+        "The data quality is fair ({score}/100). Several issues were detected that should be addressed before analysis.",
+      qualityPoor:
+        "The data quality is poor ({score}/100). Significant cleaning is recommended before proceeding.",
+      compositionMixed:
+        "It contains {numeric} numeric and {text} text columns, supporting both statistical and categorical analysis.",
+      compositionNumericOnly:
+        "All {numeric} columns are numeric, making it well-suited for statistical analysis.",
+      compositionTextOnly:
+        "The dataset is entirely categorical with {text} text columns.",
+      closingReady: "The dataset is ready for analysis and visualization.",
+      closingGood:
+        "Addressing the detected issues will improve the reliability of your analysis.",
+      closingPoor: "Review and clean the data before drawing conclusions from it.",
+    },
+    actions: {
+      duplicates: "Remove {count} duplicate rows to avoid skewed results.",
+      missing: "Fill or remove {count} missing values ({pct}% of all cells).",
+      emptyColumns:
+        "Drop or inspect {count} empty columns — they contribute no data.",
+      noAction: "No action required. The dataset is ready for analysis.",
+    },
+  },
 };
 
 export default en;

@@ -1,13 +1,16 @@
 /**
  * SummaryCard — deterministic AI-style summary panel.
  *
- * All text is derived from existing analysis results.
- * No model calls. No animations.
+ * All text comes from t.summary.* — fully localised, no hardcoded strings.
+ * All prose is derived from existing analysis results; no model calls.
  */
 
 import { CheckCircle2, AlertTriangle, XCircle, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/i18n/context";
+import { tpl } from "@/i18n/tpl";
 import type { ParsedFile } from "@/types";
+import type { Translations } from "@/i18n/types";
 
 // ─── Health tier ──────────────────────────────────────────────────────────────
 
@@ -22,11 +25,11 @@ interface Health {
   iconCls: string;
 }
 
-function getHealth(score: number): Health {
+function getHealth(score: number, t: Translations): Health {
   if (score >= 80)
     return {
       tier: "excellent",
-      label: "Excellent",
+      label: t.scoreLabel.excellent,
       pillCls: "bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20",
       dotCls:  "bg-emerald-500",
       Icon:    CheckCircle2,
@@ -35,7 +38,7 @@ function getHealth(score: number): Health {
   if (score >= 60)
     return {
       tier: "good",
-      label: "Good",
+      label: t.scoreLabel.good,
       pillCls: "bg-blue-500/10 text-blue-400 ring-1 ring-blue-500/20",
       dotCls:  "bg-blue-500",
       Icon:    Info,
@@ -44,7 +47,7 @@ function getHealth(score: number): Health {
   if (score >= 40)
     return {
       tier: "fair",
-      label: "Fair",
+      label: t.scoreLabel.fair,
       pillCls: "bg-amber-500/10 text-amber-400 ring-1 ring-amber-500/20",
       dotCls:  "bg-amber-500",
       Icon:    AlertTriangle,
@@ -52,7 +55,7 @@ function getHealth(score: number): Health {
     };
   return {
     tier: "poor",
-    label: "Poor",
+    label: t.scoreLabel.poor,
     pillCls: "bg-red-500/10 text-red-400 ring-1 ring-red-500/20",
     dotCls:  "bg-red-500",
     Icon:    XCircle,
@@ -62,77 +65,69 @@ function getHealth(score: number): Health {
 
 // ─── Deterministic summary prose ──────────────────────────────────────────────
 
-function buildSummary(file: ParsedFile): string {
+function buildSummary(file: ParsedFile, t: Translations): string {
+  const p        = t.summary.prose;
   const dq       = file.dataQuality;
   const dataRows = Math.max(0, file.rowCount - 1);
   const sentences: string[] = [];
 
   // 1 — Size
   sentences.push(
-    `This dataset contains ${dataRows.toLocaleString()} rows and ${file.colCount.toLocaleString()} columns.`,
+    tpl(p.size, {
+      rows: dataRows.toLocaleString(),
+      cols: file.colCount.toLocaleString(),
+    }),
   );
 
-  // 2 — Quality + notable issues
+  // 2 — Quality tier
   if (!dq) {
-    sentences.push("Quality analysis is not available for this file.");
+    // no quality data — skip tier sentence
   } else if (dq.qualityScore >= 80) {
-    const missingPart =
-      dq.missingValues === 0
-        ? "no missing values"
-        : `only ${dq.missingPercent.toFixed(1)}% missing values`;
-    const dupPart =
-      dq.duplicateRows === 0
-        ? "no duplicate records"
-        : `${dq.duplicateRows.toLocaleString()} duplicate row${dq.duplicateRows !== 1 ? "s" : ""}`;
-    sentences.push(
-      `The data quality is excellent with ${missingPart} and ${dupPart}.`,
-    );
+    const hasMissing = dq.missingValues > 0;
+    const hasDupes   = dq.duplicateRows > 0;
+    if (!hasMissing && !hasDupes) {
+      sentences.push(p.qualityExcellentClean);
+    } else if (hasMissing && !hasDupes) {
+      sentences.push(tpl(p.qualityExcellentMissing, { pct: dq.missingPercent.toFixed(1) }));
+    } else if (!hasMissing && hasDupes) {
+      sentences.push(tpl(p.qualityExcellentDupes, { count: dq.duplicateRows.toLocaleString() }));
+    } else {
+      sentences.push(
+        tpl(p.qualityExcellentBoth, {
+          pct:   dq.missingPercent.toFixed(1),
+          count: dq.duplicateRows.toLocaleString(),
+        }),
+      );
+    }
   } else if (dq.qualityScore >= 60) {
-    const issues: string[] = [];
-    if (dq.missingValues > 0) issues.push(`${dq.missingPercent.toFixed(1)}% missing values`);
-    if (dq.duplicateRows  > 0) issues.push(`${dq.duplicateRows.toLocaleString()} duplicate rows`);
-    if (dq.emptyColumns   > 0) issues.push(`${dq.emptyColumns} empty column${dq.emptyColumns !== 1 ? "s" : ""}`);
-    sentences.push(
-      issues.length > 0
-        ? `The data quality is good (${dq.qualityScore}/100), with minor issues: ${issues.join(", ")}.`
-        : `The data quality is good with a score of ${dq.qualityScore}/100.`,
-    );
+    sentences.push(tpl(p.qualityGood, { score: String(dq.qualityScore) }));
   } else if (dq.qualityScore >= 40) {
-    sentences.push(
-      `The data quality is fair (${dq.qualityScore}/100). Several issues were detected that should be addressed before analysis.`,
-    );
+    sentences.push(tpl(p.qualityFair, { score: String(dq.qualityScore) }));
   } else {
-    sentences.push(
-      `The data quality is poor (${dq.qualityScore}/100). Significant cleaning is recommended before proceeding.`,
-    );
+    sentences.push(tpl(p.qualityPoor, { score: String(dq.qualityScore) }));
   }
 
-  // 3 — Column composition (only if meaningful)
+  // 3 — Column composition
   if (dq && dq.numericColumns > 0 && dq.textColumns > 0) {
     sentences.push(
-      `It contains ${dq.numericColumns} numeric and ${dq.textColumns} text column${dq.textColumns !== 1 ? "s" : ""}, supporting both statistical and categorical analysis.`,
+      tpl(p.compositionMixed, {
+        numeric: dq.numericColumns.toLocaleString(),
+        text:    dq.textColumns.toLocaleString(),
+      }),
     );
   } else if (dq && dq.numericColumns > 0 && dq.textColumns === 0) {
-    sentences.push(
-      `All ${dq.numericColumns} column${dq.numericColumns !== 1 ? "s are" : " is"} numeric, making it well-suited for statistical analysis.`,
-    );
+    sentences.push(tpl(p.compositionNumericOnly, { numeric: dq.numericColumns.toLocaleString() }));
   } else if (dq && dq.textColumns > 0 && dq.numericColumns === 0) {
-    sentences.push(
-      `The dataset is entirely categorical with ${dq.textColumns} text column${dq.textColumns !== 1 ? "s" : ""}.`,
-    );
+    sentences.push(tpl(p.compositionTextOnly, { text: dq.textColumns.toLocaleString() }));
   }
 
   // 4 — Closing verdict
   if (!dq || dq.qualityScore >= 80) {
-    sentences.push("The dataset is ready for analysis and visualization.");
+    sentences.push(p.closingReady);
   } else if (dq.qualityScore >= 60) {
-    sentences.push(
-      "Addressing the detected issues will improve the reliability of your analysis.",
-    );
+    sentences.push(p.closingGood);
   } else {
-    sentences.push(
-      "Review and clean the data before drawing conclusions from it.",
-    );
+    sentences.push(p.closingPoor);
   }
 
   return sentences.join(" ");
@@ -145,35 +140,40 @@ interface Action {
   text: string;
 }
 
-function buildActions(file: ParsedFile): Action[] {
+function buildActions(file: ParsedFile, t: Translations): Action[] {
+  const a  = t.summary.actions;
   const dq = file.dataQuality;
-  if (!dq) return [{ kind: "success", text: "No action required. The dataset is ready for analysis." }];
+
+  if (!dq) return [{ kind: "success", text: a.noAction }];
 
   const actions: Action[] = [];
 
   if (dq.duplicateRows > 0) {
     actions.push({
       kind: "warning",
-      text: `Remove ${dq.duplicateRows.toLocaleString()} duplicate row${dq.duplicateRows !== 1 ? "s" : ""} to avoid skewed results.`,
+      text: tpl(a.duplicates, { count: dq.duplicateRows.toLocaleString() }),
     });
   }
 
   if (dq.missingValues > 0) {
     actions.push({
       kind: "warning",
-      text: `Fill or remove ${dq.missingValues.toLocaleString()} missing value${dq.missingValues !== 1 ? "s" : ""} (${dq.missingPercent.toFixed(1)}% of all cells).`,
+      text: tpl(a.missing, {
+        count: dq.missingValues.toLocaleString(),
+        pct:   dq.missingPercent.toFixed(1),
+      }),
     });
   }
 
   if (dq.emptyColumns > 0) {
     actions.push({
       kind: "warning",
-      text: `Drop or inspect ${dq.emptyColumns} empty column${dq.emptyColumns !== 1 ? "s" : ""} — they contribute no data.`,
+      text: tpl(a.emptyColumns, { count: dq.emptyColumns.toLocaleString() }),
     });
   }
 
   if (actions.length === 0) {
-    actions.push({ kind: "success", text: "No action required. The dataset is ready for analysis." });
+    actions.push({ kind: "success", text: a.noAction });
   }
 
   return actions;
@@ -187,30 +187,22 @@ interface Metric {
   sub?: string;
 }
 
-function buildMetrics(file: ParsedFile): Metric[] {
-  const dq       = file.dataQuality;
+function buildMetrics(file: ParsedFile, t: Translations): Metric[] {
+  const m  = t.summary.metrics;
+  const dq = file.dataQuality;
   const dataRows = Math.max(0, file.rowCount - 1);
 
   return [
+    { label: m.rows,           value: dataRows.toLocaleString() },
+    { label: m.columns,        value: file.colCount.toLocaleString() },
     {
-      label: "Rows",
-      value: dataRows.toLocaleString(),
-    },
-    {
-      label: "Columns",
-      value: file.colCount.toLocaleString(),
-    },
-    {
-      label: "Missing Values",
+      label: m.missingValues,
       value: dq ? dq.missingValues.toLocaleString() : "—",
       sub:   dq && dq.missingValues > 0 ? `${dq.missingPercent.toFixed(1)}%` : undefined,
     },
+    { label: m.duplicateRows,  value: dq ? dq.duplicateRows.toLocaleString() : "—" },
     {
-      label: "Duplicate Rows",
-      value: dq ? dq.duplicateRows.toLocaleString() : "—",
-    },
-    {
-      label: "Quality Score",
+      label: m.qualityScore,
       value: dq ? `${dq.qualityScore}` : "—",
       sub:   dq ? "/ 100" : undefined,
     },
@@ -224,12 +216,13 @@ interface SummaryCardProps {
 }
 
 export function SummaryCard({ file }: SummaryCardProps) {
+  const { t }   = useLocale();
   const dq      = file.dataQuality;
   const score   = dq?.qualityScore ?? 0;
-  const health  = getHealth(dq ? score : 0);
-  const summary = buildSummary(file);
-  const actions = buildActions(file);
-  const metrics = buildMetrics(file);
+  const health  = getHealth(dq ? score : 0, t);
+  const summary = buildSummary(file, t);
+  const actions = buildActions(file, t);
+  const metrics = buildMetrics(file, t);
 
   return (
     <div className="mx-6 mt-6 mb-1 rounded-2xl border border-border bg-card overflow-hidden">
@@ -237,14 +230,21 @@ export function SummaryCard({ file }: SummaryCardProps) {
       <div className="flex items-center justify-between px-5 py-4 border-b border-border/60">
         <div className="flex items-center gap-2.5">
           <health.Icon className={cn("w-4 h-4 shrink-0", health.iconCls)} />
-          <span className="text-sm font-semibold text-foreground">Dataset Health</span>
-          <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold", health.pillCls)}>
+          <span className="text-sm font-semibold text-foreground">
+            {t.summary.datasetHealth}
+          </span>
+          <span
+            className={cn(
+              "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold",
+              health.pillCls,
+            )}
+          >
             <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", health.dotCls)} />
             {health.label}
           </span>
         </div>
         <span className="text-[10px] font-medium tracking-widest uppercase text-muted-foreground/50 select-none">
-          Summary
+          {t.summary.title}
         </span>
       </div>
 
@@ -252,13 +252,16 @@ export function SummaryCard({ file }: SummaryCardProps) {
       <div className="flex flex-col gap-0 divide-y divide-border/50">
         {/* Quick summary */}
         <div className="px-5 py-4">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60 mb-2">
+            {t.summary.quickSummary}
+          </p>
           <p className="text-sm leading-relaxed text-muted-foreground">{summary}</p>
         </div>
 
         {/* Key metrics */}
         <div className="px-5 py-4">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60 mb-3">
-            Key Metrics
+            {t.summary.keyMetrics}
           </p>
           <div className="grid grid-cols-5 gap-3">
             {metrics.map((m) => (
@@ -270,7 +273,7 @@ export function SummaryCard({ file }: SummaryCardProps) {
         {/* Recommended actions */}
         <div className="px-5 py-4">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60 mb-3">
-            Recommended Actions
+            {t.summary.recommendedActions}
           </p>
           <ul className="flex flex-col gap-2">
             {actions.map((action, i) => (

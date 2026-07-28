@@ -237,4 +237,69 @@ export type Translations = {
     sortAsc: string;
     sortDesc: string;
   };
+  summary: {
+    /** Card heading shown top-right */
+    title: string;
+    /** Section label for the health badge row */
+    datasetHealth: string;
+    /** Section label above the prose paragraph */
+    quickSummary: string;
+    /** Section label above the five metric tiles */
+    keyMetrics: string;
+    /** Section label above the action list */
+    recommendedActions: string;
+    /** Short labels for the five metric tiles */
+    metrics: {
+      rows: string;
+      columns: string;
+      missingValues: string;
+      duplicateRows: string;
+      qualityScore: string;
+    };
+    /**
+     * Prose sentence templates.
+     * Placeholders: {rows} {cols} {pct} {count} {score} {numeric} {text}
+     */
+    prose: {
+      /** {rows}, {cols} */
+      size: string;
+      /** no placeholders */
+      qualityExcellentClean: string;
+      /** {pct} */
+      qualityExcellentMissing: string;
+      /** {count} */
+      qualityExcellentDupes: string;
+      /** {pct}, {count} */
+      qualityExcellentBoth: string;
+      /** {score} */
+      qualityGood: string;
+      /** {score} */
+      qualityFair: string;
+      /** {score} */
+      qualityPoor: string;
+      /** {numeric}, {text} */
+      compositionMixed: string;
+      /** {numeric} */
+      compositionNumericOnly: string;
+      /** {text} */
+      compositionTextOnly: string;
+      /** no placeholders */
+      closingReady: string;
+      /** no placeholders */
+      closingGood: string;
+      /** no placeholders */
+      closingPoor: string;
+    };
+    /** Action sentence templates */
+    actions: {
+      /** {count} */
+      duplicates: string;
+      /** {count}, {pct} */
+      missing: string;
+      /** {count} */
+      emptyColumns: string;
+      /** no placeholders */
+      noAction: string;
+    };
+  };
 };
