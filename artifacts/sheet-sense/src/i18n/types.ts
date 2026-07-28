@@ -51,11 +51,15 @@ export type Translations = {
     /** {n} */
     qualityScore: string;
     removeDataset: string;
+    renameDataset: string;
+    renameInputPlaceholder: string;
     openSidebar: string;
     closeSidebar: string;
     activeLabel: string;
     dropHint: string;
     selectPrompt: string;
+    continueToWorkspace: string;
+    backToWorkspace: string;
   };
   fileStats: {
     fileName: string;

@@ -79,4 +79,9 @@ export type Dataset = {
   uploadedAt: number;
   /** All parsed data, quality metrics, and chart series for this file. */
   file: ParsedFile;
+  /**
+   * User-assigned display name. Falls back to `file.fileName` when absent.
+   * The original file metadata is always preserved.
+   */
+  displayName?: string;
 };

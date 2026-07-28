@@ -1,5 +1,8 @@
-import { useRef, useState, useCallback } from "react";
-import { Plus, X, Loader2, FileSpreadsheet, AlertCircle, PanelLeftClose } from "lucide-react";
+import { useRef, useState, useCallback, useEffect } from "react";
+import {
+  Plus, X, Loader2, FileSpreadsheet, AlertCircle,
+  PanelLeftClose, Pencil, GripVertical,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocale } from "@/i18n/context";
 import { tpl } from "@/i18n/tpl";
@@ -18,8 +21,10 @@ interface DatasetSidebarProps {
 
 export function DatasetSidebar({ isOpen, onClose }: DatasetSidebarProps) {
   const { t, dir } = useLocale();
-  const { datasets, activeId, setActiveId, removeDataset, addDataset } =
-    useDatasets();
+  const {
+    datasets, activeId, setActiveId,
+    removeDataset, addDataset, renameDataset, reorderDatasets,
+  } = useDatasets();
 
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -27,21 +32,22 @@ export function DatasetSidebar({ isOpen, onClose }: DatasetSidebarProps) {
   const dropRef = useRef<HTMLDivElement>(null);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
 
-  // Accept a plain File[] — never a live FileList.
-  // FileList is a live reference to the input element's internal collection.
-  // Resetting the input (value = "") or returning from a drag event clears it,
-  // so any async handler that receives a FileList and yields before iterating
-  // will see an empty list. Converting to File[] synchronously in the event
-  // handler — before any reset or yield — gives us an independent snapshot.
+  // ── Drag-to-reorder state ──────────────────────────────────────────────────
+  // Tracks which card is being dragged, which card is the drop target, and
+  // whether the insertion point is before or after the target card.
+  const [dragId, setDragId]         = useState<string | null>(null);
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+  const [dropBefore, setDropBefore] = useState(true);
+
+  // ── File upload ───────────────────────────────────────────────────────────
+  // Accept a plain File[] — never a live FileList (see comment in original).
   const handleFiles = useCallback(
     async (files: File[]) => {
       if (files.length === 0) return;
       setIsUploading(true);
       setUploadError(null);
-      // Small delay so the loading indicator renders before xlsx blocks the thread
       await new Promise((r) => setTimeout(r, 50));
       try {
-        // Process files sequentially; the last one becomes active
         for (const file of files) {
           const pf = await parseFile(file);
           addDataset(pf);
@@ -66,25 +72,61 @@ export function DatasetSidebar({ isOpen, onClose }: DatasetSidebarProps) {
   );
 
   const onFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Convert to a plain array synchronously — before the reset below clears
-    // the live FileList that e.target.files points to.
     const files = Array.from(e.target.files ?? []);
-    e.target.value = ""; // allow re-selecting the same file
+    e.target.value = "";
     handleFiles(files);
   };
 
-  const onDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDraggingOver(true);
-  };
-  const onDragLeave = () => setIsDraggingOver(false);
-  const onDrop = (e: React.DragEvent) => {
+  const onDropzoneDragOver  = (e: React.DragEvent) => { e.preventDefault(); setIsDraggingOver(true); };
+  const onDropzoneDragLeave = () => setIsDraggingOver(false);
+  const onDropzoneDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDraggingOver(false);
-    // Convert synchronously — dataTransfer is cleared once the event handler
-    // returns, so passing the live FileList into an async function loses it.
     handleFiles(Array.from(e.dataTransfer.files));
   };
+
+  // ── Drag-to-reorder handlers ──────────────────────────────────────────────
+
+  const onCardDragStart = useCallback((e: React.DragEvent, id: string) => {
+    setDragId(id);
+    // Required for Firefox; the data is unused.
+    e.dataTransfer.setData("text/plain", id);
+    e.dataTransfer.effectAllowed = "move";
+  }, []);
+
+  const onCardDragOver = useCallback(
+    (e: React.DragEvent, id: string) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      if (id === dragId) return;
+      setDropTargetId(id);
+      // Determine insert position from cursor Y vs card midpoint
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      setDropBefore(e.clientY < rect.top + rect.height / 2);
+    },
+    [dragId],
+  );
+
+  const onCardDragLeave = useCallback(() => {
+    setDropTargetId(null);
+  }, []);
+
+  const onCardDrop = useCallback(
+    (e: React.DragEvent, targetId: string) => {
+      e.preventDefault();
+      if (dragId && dragId !== targetId) {
+        reorderDatasets(dragId, targetId, dropBefore);
+      }
+      setDragId(null);
+      setDropTargetId(null);
+    },
+    [dragId, dropBefore, reorderDatasets],
+  );
+
+  const onCardDragEnd = useCallback(() => {
+    setDragId(null);
+    setDropTargetId(null);
+  }, []);
 
   return (
     <>
@@ -97,14 +139,11 @@ export function DatasetSidebar({ isOpen, onClose }: DatasetSidebarProps) {
         />
       )}
 
-      {/* Sidebar panel */}
       <aside
         data-testid="dataset-sidebar"
         className={cn(
-          // Base
           "flex flex-col bg-card border-e border-border shrink-0",
           "w-[272px] h-[calc(100dvh-64px)]",
-          // Mobile: fixed drawer that slides in
           "fixed top-[64px] z-40 transition-transform duration-200 ease-out",
           dir === "rtl" ? "right-0" : "left-0",
           isOpen
@@ -112,7 +151,6 @@ export function DatasetSidebar({ isOpen, onClose }: DatasetSidebarProps) {
             : dir === "rtl"
               ? "translate-x-full"
               : "-translate-x-full",
-          // Desktop: always visible, part of flow
           "lg:relative lg:top-0 lg:z-auto lg:translate-x-0 lg:block",
         )}
       >
@@ -125,7 +163,6 @@ export function DatasetSidebar({ isOpen, onClose }: DatasetSidebarProps) {
             <span className="text-xs text-muted-foreground tabular-nums bg-muted rounded-full px-2 py-0.5">
               {datasets.length}
             </span>
-            {/* Close button — only on mobile */}
             <button
               onClick={onClose}
               aria-label={t.datasets.closeSidebar}
@@ -139,9 +176,9 @@ export function DatasetSidebar({ isOpen, onClose }: DatasetSidebarProps) {
         {/* ── Add Dataset drop zone ── */}
         <div
           ref={dropRef}
-          onDragOver={onDragOver}
-          onDragLeave={onDragLeave}
-          onDrop={onDrop}
+          onDragOver={onDropzoneDragOver}
+          onDragLeave={onDropzoneDragLeave}
+          onDrop={onDropzoneDrop}
           className="p-3 border-b border-border shrink-0"
         >
           <button
@@ -193,11 +230,20 @@ export function DatasetSidebar({ isOpen, onClose }: DatasetSidebarProps) {
               key={dataset.id}
               dataset={dataset}
               isActive={dataset.id === activeId}
+              isDragging={dataset.id === dragId}
+              isDropTarget={dataset.id === dropTargetId}
+              dropBefore={dropBefore}
               onSelect={() => {
                 setActiveId(dataset.id);
-                onClose(); // close drawer on mobile after selecting
+                onClose();
               }}
               onRemove={() => removeDataset(dataset.id)}
+              onRename={(name) => renameDataset(dataset.id, name)}
+              onDragStart={(e) => onCardDragStart(e, dataset.id)}
+              onDragOver={(e) => onCardDragOver(e, dataset.id)}
+              onDragLeave={onCardDragLeave}
+              onDrop={(e) => onCardDrop(e, dataset.id)}
+              onDragEnd={onCardDragEnd}
             />
           ))}
         </div>
@@ -211,52 +257,148 @@ export function DatasetSidebar({ isOpen, onClose }: DatasetSidebarProps) {
 interface DatasetCardProps {
   dataset: Dataset;
   isActive: boolean;
+  isDragging: boolean;
+  isDropTarget: boolean;
+  dropBefore: boolean;
   onSelect: () => void;
   onRemove: () => void;
+  onRename: (name: string) => void;
+  onDragStart: (e: React.DragEvent) => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDragLeave: () => void;
+  onDrop: (e: React.DragEvent) => void;
+  onDragEnd: () => void;
 }
 
 function DatasetCard({
   dataset,
   isActive,
+  isDragging,
+  isDropTarget,
+  dropBefore,
   onSelect,
   onRemove,
+  onRename,
+  onDragStart,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+  onDragEnd,
 }: DatasetCardProps) {
   const { t } = useLocale();
   const { file } = dataset;
+  const displayName = dataset.displayName ?? file.fileName;
   const score = file.dataQuality?.qualityScore ?? null;
+
+  // ── Inline rename state ──────────────────────────────────────────────────
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(displayName);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Sync editValue if displayName changes externally
+  useEffect(() => {
+    if (!isEditing) setEditValue(displayName);
+  }, [displayName, isEditing]);
+
+  const startEditing = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      setEditValue(displayName);
+      setIsEditing(true);
+    },
+    [displayName],
+  );
+
+  const commitRename = useCallback(() => {
+    const trimmed = editValue.trim();
+    onRename(trimmed);
+    setIsEditing(false);
+  }, [editValue, onRename]);
+
+  const cancelRename = useCallback(() => {
+    setEditValue(displayName);
+    setIsEditing(false);
+  }, [displayName]);
+
+  const onInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter")  { e.preventDefault(); commitRename(); }
+    if (e.key === "Escape") { e.preventDefault(); cancelRename(); }
+  };
+
+  useEffect(() => {
+    if (isEditing) inputRef.current?.focus();
+  }, [isEditing]);
 
   return (
     <div
+      draggable={!isEditing}
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+      onDragEnd={onDragEnd}
       className={cn(
-        "group relative rounded-lg border px-3 py-2.5 cursor-pointer transition-all duration-150",
+        "group relative rounded-lg border px-3 py-2.5 cursor-pointer transition-all duration-150 select-none",
         isActive
           ? "border-primary bg-primary/5 shadow-sm"
           : "border-border hover:border-primary/30 hover:bg-muted/50",
+        isDragging && "opacity-40",
+        // Drop-target indicator: top or bottom border highlight
+        isDropTarget && dropBefore  && "border-t-2 border-t-primary",
+        isDropTarget && !dropBefore && "border-b-2 border-b-primary",
       )}
-      onClick={onSelect}
+      onClick={isEditing ? undefined : onSelect}
       role="button"
       tabIndex={0}
-      onKeyDown={(e) => e.key === "Enter" && onSelect()}
+      onKeyDown={(e) => {
+        if (!isEditing && e.key === "Enter") onSelect();
+      }}
       aria-current={isActive ? "page" : undefined}
     >
-      {/* File name row */}
-      <div className="flex items-start gap-2 pe-6">
+      {/* ── File name / rename input row ── */}
+      <div className="flex items-start gap-1.5 pe-14">
+        {/* Drag handle */}
+        <div
+          className="mt-0.5 shrink-0 cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <GripVertical className="w-3.5 h-3.5" />
+        </div>
+
         <FileSpreadsheet
           className={cn(
             "w-4 h-4 mt-px shrink-0",
             isActive ? "text-primary" : "text-muted-foreground",
           )}
         />
-        <span
-          className="text-sm font-medium text-foreground leading-snug break-all line-clamp-2"
-          title={file.fileName}
-        >
-          {file.fileName}
-        </span>
+
+        {isEditing ? (
+          <input
+            ref={inputRef}
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            onKeyDown={onInputKeyDown}
+            onBlur={commitRename}
+            onClick={(e) => e.stopPropagation()}
+            placeholder={t.datasets.renameInputPlaceholder}
+            className={cn(
+              "flex-1 min-w-0 text-sm font-medium text-foreground bg-transparent",
+              "border-b border-primary outline-none leading-snug pb-px",
+              "placeholder:text-muted-foreground/50",
+            )}
+          />
+        ) : (
+          <span
+            className="flex-1 min-w-0 text-sm font-medium text-foreground leading-snug break-all line-clamp-2"
+            title={displayName}
+          >
+            {displayName}
+          </span>
+        )}
       </div>
 
-      {/* Stats row */}
-      <div className="mt-1.5 ps-6 flex items-center gap-2 flex-wrap">
+      {/* ── Stats row ── */}
+      <div className="mt-1.5 ps-9 flex items-center gap-2 flex-wrap">
         <span className="text-[11px] text-muted-foreground">
           {tpl(t.datasets.rows, { n: (file.rowCount - 1).toLocaleString() })}
         </span>
@@ -284,30 +426,38 @@ function DatasetCard({
         )}
       </div>
 
-      {/* Quality bar */}
+      {/* ── Quality bar ── */}
       {score !== null && (
-        <div className="mt-2 ps-6 h-1 rounded-full bg-muted overflow-hidden">
+        <div className="mt-2 ps-9 h-1 rounded-full bg-muted overflow-hidden">
           <div
             className="h-full rounded-full transition-all duration-300"
-            style={{
-              width: `${score}%`,
-              backgroundColor: scoreColor(score),
-            }}
+            style={{ width: `${score}%`, backgroundColor: scoreColor(score) }}
           />
         </div>
       )}
 
-      {/* Remove button */}
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onRemove();
-        }}
-        aria-label={t.datasets.removeDataset}
-        className="absolute top-2 end-2 p-1 rounded-md text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-all duration-150"
-      >
-        <X className="w-3.5 h-3.5" />
-      </button>
+      {/* ── Action buttons (rename + remove) ── */}
+      {!isEditing && (
+        <>
+          {/* Rename */}
+          <button
+            onClick={startEditing}
+            aria-label={t.datasets.renameDataset}
+            className="absolute top-2 end-8 p-1 rounded-md text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-muted hover:text-foreground transition-all duration-150"
+          >
+            <Pencil className="w-3 h-3" />
+          </button>
+
+          {/* Remove */}
+          <button
+            onClick={(e) => { e.stopPropagation(); onRemove(); }}
+            aria-label={t.datasets.removeDataset}
+            className="absolute top-2 end-2 p-1 rounded-md text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-all duration-150"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </>
+      )}
     </div>
   );
 }
@@ -321,9 +471,7 @@ function scoreColor(score: number): string {
 }
 
 function scoreStyle(score: number): string {
-  if (score >= 80)
-    return "text-emerald-700 bg-emerald-50 border-emerald-200";
-  if (score >= 60)
-    return "text-amber-700 bg-amber-50 border-amber-200";
+  if (score >= 80) return "text-emerald-700 bg-emerald-50 border-emerald-200";
+  if (score >= 60) return "text-amber-700 bg-amber-50 border-amber-200";
   return "text-red-700 bg-red-50 border-red-200";
 }

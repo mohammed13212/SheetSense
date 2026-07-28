@@ -8,22 +8,37 @@ import { LanguageSwitcher } from "./LanguageSwitcher";
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface AppHeaderProps {
-  /** Render the mobile hamburger button and fire this callback when clicked.
-   *  Used by the Home page to toggle the dataset sidebar drawer. */
+  /** Render the mobile hamburger button and fire this callback when clicked. */
   showMenuButton?: boolean;
   onMenuClick?: () => void;
+  /**
+   * When provided, the logo fires this callback instead of navigating.
+   * Used by the Home page to return to the hero/landing view without a route change.
+   */
+  onLogoClick?: () => void;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function AppHeader({ showMenuButton, onMenuClick }: AppHeaderProps) {
+export function AppHeader({ showMenuButton, onMenuClick, onLogoClick }: AppHeaderProps) {
   const { t } = useLocale();
   const [location] = useLocation();
+
+  const logoContent = (
+    <>
+      <div className="bg-primary p-2 rounded-lg text-primary-foreground shadow-sm">
+        <BarChart2 className="w-5 h-5" />
+      </div>
+      <span className="text-xl font-bold tracking-tight text-foreground hidden sm:inline">
+        {t.nav.appName}
+      </span>
+    </>
+  );
 
   return (
     <header className="h-16 shrink-0 border-b border-border bg-card/60 backdrop-blur-sm sticky top-0 z-20">
       <div className="h-full px-4 md:px-5 flex items-center gap-2">
-        {/* Mobile hamburger — only when the Home sidebar exists */}
+        {/* Mobile hamburger */}
         {showMenuButton && onMenuClick && (
           <button
             onClick={onMenuClick}
@@ -34,15 +49,20 @@ export function AppHeader({ showMenuButton, onMenuClick }: AppHeaderProps) {
           </button>
         )}
 
-        {/* Logo — always links to workspace root */}
-        <Link href="/" className="flex items-center gap-2.5 shrink-0">
-          <div className="bg-primary p-2 rounded-lg text-primary-foreground shadow-sm">
-            <BarChart2 className="w-5 h-5" />
-          </div>
-          <span className="text-xl font-bold tracking-tight text-foreground hidden sm:inline">
-            {t.nav.appName}
-          </span>
-        </Link>
+        {/* Logo */}
+        {onLogoClick ? (
+          <button
+            onClick={onLogoClick}
+            className="flex items-center gap-2.5 shrink-0 hover:opacity-80 transition-opacity"
+            aria-label={t.nav.appName}
+          >
+            {logoContent}
+          </button>
+        ) : (
+          <Link href="/" className="flex items-center gap-2.5 shrink-0">
+            {logoContent}
+          </Link>
+        )}
 
         {/* Primary navigation */}
         <nav className="ms-3 flex items-center gap-0.5" aria-label="Main navigation">

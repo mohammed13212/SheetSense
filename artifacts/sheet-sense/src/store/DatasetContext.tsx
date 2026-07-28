@@ -1,20 +1,12 @@
 /**
  * DatasetContext — global store for all uploaded datasets.
  *
- * Architecture notes for future maintainers:
- *
- * Datasets are intentionally kept independent. Each `Dataset` is a self-
- * contained record identified by a stable `id`. The store exposes:
- *
+ * Actions:
  *   addDataset       — registers a new ParsedFile, returns its id
  *   removeDataset    — removes a dataset and updates active selection
+ *   renameDataset    — sets a user-facing display name (file.fileName preserved)
+ *   reorderDatasets  — moves a dataset before or after another by id
  *   setActiveId      — switches the active view
- *
- * To add inter-dataset relationship management in the future:
- *   1. Define `DatasetRelationship` in `src/types/relationships.ts`
- *   2. Add a `relationships` array to this context value
- *   3. Add `addRelationship(rel)` and `removeRelationship(id)` actions here
- *   4. The RelationshipPanel component will read from this same context
  */
 
 import {
@@ -40,15 +32,20 @@ interface DatasetContextValue {
   /** Remove a dataset by id. Automatically selects the next dataset if active. */
   removeDataset: (id: string) => void;
 
+  /**
+   * Set a user-facing display name for a dataset.
+   * Passing an empty string removes the custom name (falls back to file.fileName).
+   */
+  renameDataset: (id: string, name: string) => void;
+
+  /**
+   * Move dataset `dragId` to be immediately before or after `targetId`.
+   * The active selection is preserved.
+   */
+  reorderDatasets: (dragId: string, targetId: string, before: boolean) => void;
+
   /** Switch the active dataset view. */
   setActiveId: (id: string) => void;
-
-  // ── Extension points for future relationship management ────────────────────
-  // Uncomment and implement when DatasetRelationship is defined:
-  //
-  // relationships: DatasetRelationship[];
-  // addRelationship(rel: DatasetRelationship): void;
-  // removeRelationship(id: string): void;
 }
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -61,7 +58,7 @@ export function DatasetProvider({ children }: { children: ReactNode }) {
   const [datasets, setDatasets] = useState<Dataset[]>([]);
   const [activeId, setActiveIdState] = useState<string | null>(null);
 
-  // Keep a ref to datasets so removeDataset closure always sees current list
+  // Keep a ref so closures always see the current list without stale captures.
   const datasetsRef = useRef<Dataset[]>(datasets);
   datasetsRef.current = datasets;
 
@@ -76,7 +73,6 @@ export function DatasetProvider({ children }: { children: ReactNode }) {
   const removeDataset = useCallback((id: string) => {
     setDatasets((prev) => {
       const next = prev.filter((d) => d.id !== id);
-      // If we just removed the active dataset, activate the last remaining one
       setActiveIdState((current) => {
         if (current !== id) return current;
         return next.at(-1)?.id ?? null;
@@ -84,6 +80,33 @@ export function DatasetProvider({ children }: { children: ReactNode }) {
       return next;
     });
   }, []);
+
+  const renameDataset = useCallback((id: string, name: string) => {
+    setDatasets((prev) =>
+      prev.map((d) =>
+        d.id === id
+          ? { ...d, displayName: name.trim() || undefined }
+          : d,
+      ),
+    );
+  }, []);
+
+  const reorderDatasets = useCallback(
+    (dragId: string, targetId: string, before: boolean) => {
+      setDatasets((prev) => {
+        const dragged = prev.find((d) => d.id === dragId);
+        if (!dragged || dragId === targetId) return prev;
+        const rest = prev.filter((d) => d.id !== dragId);
+        const targetIdx = rest.findIndex((d) => d.id === targetId);
+        if (targetIdx === -1) return prev;
+        const insertIdx = before ? targetIdx : targetIdx + 1;
+        const next = [...rest];
+        next.splice(insertIdx, 0, dragged);
+        return next;
+      });
+    },
+    [],
+  );
 
   const setActiveId = useCallback((id: string) => {
     setActiveIdState(id);
@@ -99,6 +122,8 @@ export function DatasetProvider({ children }: { children: ReactNode }) {
         activeDataset,
         addDataset,
         removeDataset,
+        renameDataset,
+        reorderDatasets,
         setActiveId,
       }}
     >

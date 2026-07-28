@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DropZone } from "@/components/DropZone";
 import { AppHeader } from "@/components/AppHeader";
@@ -14,8 +15,13 @@ export default function Home() {
   const { t, dir } = useLocale();
   const { datasets, activeDataset, addDataset } = useDatasets();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  // showHero: true = landing/hero view; false = workspace view.
+  // Starts on the hero. Auto-switches to workspace after the first upload.
+  // Logo click from workspace returns here without losing any data.
+  const [showHero, setShowHero] = useState(true);
 
   const hasDatasets = datasets.length > 0;
+  const inWorkspace = hasDatasets && !showHero;
 
   return (
     <div
@@ -24,44 +30,60 @@ export default function Home() {
     >
       {/* ── Header ── */}
       <AppHeader
-        showMenuButton={hasDatasets}
+        showMenuButton={inWorkspace}
         onMenuClick={() => setSidebarOpen(true)}
+        // From the workspace, clicking the logo navigates back to the hero.
+        // From the hero itself there's nothing to go "back" to, so no callback.
+        onLogoClick={inWorkspace ? () => setShowHero(true) : undefined}
       />
 
       {/* ── Body ── */}
-      <div
-        className={cn(
-          "flex flex-1 min-h-0",
-          !hasDatasets && "items-center justify-center",
-        )}
-      >
-        {hasDatasets ? (
-          <>
-            {/* Sidebar (desktop: always visible; mobile: drawer) */}
-            <DatasetSidebar
-              isOpen={sidebarOpen}
-              onClose={() => setSidebarOpen(false)}
-            />
+      {inWorkspace ? (
+        /* ── Workspace ── */
+        <div className="flex flex-1 min-h-0">
+          <DatasetSidebar
+            isOpen={sidebarOpen}
+            onClose={() => setSidebarOpen(false)}
+          />
+          <main className="flex-1 overflow-y-auto min-h-0">
+            {activeDataset ? (
+              <DatasetPanel dataset={activeDataset} />
+            ) : (
+              <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
+                {t.datasets.selectPrompt}
+              </div>
+            )}
+          </main>
+        </div>
+      ) : (
+        /* ── Hero ── */
+        <div className="flex flex-col flex-1 min-h-0 items-center justify-center">
+          {/* "Back to workspace" banner — shown when datasets already exist */}
+          {hasDatasets && (
+            <div className="w-full max-w-2xl mx-auto px-4 mb-4">
+              <button
+                onClick={() => setShowHero(false)}
+                className="w-full flex items-center justify-between gap-2 px-4 py-3 rounded-xl border border-primary/30 bg-primary/5 text-sm font-medium text-primary hover:bg-primary/10 transition-colors"
+              >
+                <span>
+                  {t.datasets.backToWorkspace}
+                  <span className="ms-1.5 text-xs font-normal text-primary/70">
+                    ({datasets.length})
+                  </span>
+                </span>
+                <ArrowRight className="w-4 h-4 shrink-0" />
+              </button>
+            </div>
+          )}
 
-            {/* Main analysis area */}
-            <main className="flex-1 overflow-y-auto min-h-0">
-              {activeDataset ? (
-                <DatasetPanel dataset={activeDataset} />
-              ) : (
-                <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
-                  {t.datasets.selectPrompt}
-                </div>
-              )}
-            </main>
-          </>
-        ) : (
-          /* Hero — shown only before the first upload */
-          <HeroUpload />
-        )}
-      </div>
+          <HeroUpload
+            onUploadSuccess={() => setShowHero(false)}
+          />
+        </div>
+      )}
 
-      {/* ── Footer — only on the empty hero screen ── */}
-      {!hasDatasets && (
+      {/* ── Footer — only on the hero screen ── */}
+      {!inWorkspace && (
         <footer className="shrink-0 border-t border-border h-14 flex items-center justify-center">
           <p className="text-sm text-muted-foreground">{t.footer.text}</p>
         </footer>
@@ -70,9 +92,13 @@ export default function Home() {
   );
 }
 
-// ─── Hero upload (no datasets yet) ───────────────────────────────────────────
+// ─── Hero upload ──────────────────────────────────────────────────────────────
 
-function HeroUpload() {
+interface HeroUploadProps {
+  onUploadSuccess: () => void;
+}
+
+function HeroUpload({ onUploadSuccess }: HeroUploadProps) {
   const { t } = useLocale();
   const { addDataset } = useDatasets();
   const [isLoading, setIsLoading] = useState(false);
@@ -83,15 +109,13 @@ function HeroUpload() {
       if (files.length === 0) return;
       setIsLoading(true);
       setError(null);
-      // Yield to React so the loading indicator renders before xlsx blocks the thread
       await new Promise((r) => setTimeout(r, 50));
       try {
-        // Process files sequentially; each one becomes its own dataset.
-        // The last successfully parsed file becomes the active selection.
         for (const file of files) {
           const pf = await parseFile(file);
           addDataset(pf);
         }
+        onUploadSuccess();
       } catch (err) {
         if (err instanceof FileParseError) {
           const map: Record<string, string> = {
@@ -108,11 +132,13 @@ function HeroUpload() {
         setIsLoading(false);
       }
     },
-    [t, addDataset],
+    [t, addDataset, onUploadSuccess],
   );
 
   return (
-    <div className="flex flex-col items-center justify-center px-4 py-8 animate-in fade-in duration-500 w-full max-w-2xl mx-auto">
+    <div className={cn(
+      "flex flex-col items-center justify-center px-4 py-8 animate-in fade-in duration-500 w-full max-w-2xl mx-auto",
+    )}>
       <div className="text-center mb-10 space-y-4">
         <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">
           {t.hero.heading}
