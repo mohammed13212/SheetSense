@@ -159,6 +159,17 @@ export type Translations = {
     typeNumeric: string;
     typeCategorical: string;
     typeUnknown: string;
+    addRelationship: string;
+    editRelationship: string;
+    deleteRelationship: string;
+    confirmDelete: string;
+    cancelDelete: string;
+    currentRelationships: {
+      title: string;
+      subtitle: string;
+      empty: string;
+      emptySub: string;
+    };
     suggestions: {
       title: string;
       subtitle: string;
@@ -171,8 +182,9 @@ export type Translations = {
         medium: string;
         low: string;
       };
-      createButton: string;
-      createTooltip: string;
+      accept: string;
+      edit: string;
+      ignore: string;
       reasons: {
         /** {type} */
         exactSameType: string;
@@ -186,11 +198,24 @@ export type Translations = {
         similarKeys: string;
       };
     };
+    editor: {
+      titleCreate: string;
+      titleEdit: string;
+      datasetA: string;
+      datasetB: string;
+      columnA: string;
+      columnB: string;
+      selectDataset: string;
+      selectColumn: string;
+      save: string;
+      cancel: string;
+    };
     diagram: {
       title: string;
       subtitle: string;
-      placeholder: string;
-      comingSoon: string;
+      empty: string;
+      emptySub: string;
+      clickHint: string;
     };
   };
   viz: {

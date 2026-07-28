@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import {
   GitBranch,
   Database,
@@ -9,6 +9,11 @@ import {
   Link2Off,
   Sparkles,
   ChevronDown,
+  Plus,
+  Pencil,
+  Trash2,
+  X,
+  CheckCircle2,
   Check,
 } from "lucide-react";
 import { Link } from "wouter";
@@ -19,7 +24,7 @@ import { useDatasets } from "@/store/DatasetContext";
 import { AppHeader } from "@/components/AppHeader";
 import type { Dataset } from "@/types";
 
-// ─── Domain types (local to this page) ───────────────────────────────────────
+// ─── Domain types ─────────────────────────────────────────────────────────────
 
 type ColType = "numeric" | "categorical" | "unknown";
 type Confidence = "high" | "medium" | "low";
@@ -44,44 +49,115 @@ interface Suggestion {
   reasonCode: ReasonCode;
 }
 
+interface Relationship {
+  id: string;
+  datasetAId: string;
+  datasetBId: string;
+  colA: ColumnInfo;
+  colB: ColumnInfo;
+  confidence?: Confidence;
+}
+
+interface EditorInit {
+  existingId?: string;
+  datasetAId?: string;
+  colA?: ColumnInfo;
+  datasetBId?: string;
+  colB?: ColumnInfo;
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function RelationshipManager() {
   const { t, dir } = useLocale();
   const { datasets } = useDatasets();
 
-  const [selectedIdA, setSelectedIdA] = useState<string | null>(null);
-  const [selectedIdB, setSelectedIdB] = useState<string | null>(null);
-  const [selectedColIdxA, setSelectedColIdxA] = useState<number | null>(null);
-  const [selectedColIdxB, setSelectedColIdxB] = useState<number | null>(null);
-
-  const datasetA = datasets.find((d) => d.id === selectedIdA) ?? null;
-  const datasetB = datasets.find((d) => d.id === selectedIdB) ?? null;
-
-  const columnsA = useMemo(
-    () => (datasetA ? getColumns(datasetA) : []),
-    [datasetA],
-  );
-  const columnsB = useMemo(
-    () => (datasetB ? getColumns(datasetB) : []),
-    [datasetB],
-  );
-
-  const suggestions = useMemo(() => {
-    if (!datasetA || !datasetB) return [];
-    return computeSuggestions(columnsA, columnsB);
-  }, [columnsA, columnsB, datasetA, datasetB]);
-
-  const handleSelectA = (id: string) => {
-    setSelectedIdA(id);
-    setSelectedColIdxA(null);
-  };
-  const handleSelectB = (id: string) => {
-    setSelectedIdB(id);
-    setSelectedColIdxB(null);
-  };
-
   const hasDatasets = datasets.length > 0;
+
+  // ── Relationships state ────────────────────────────────────────────────────
+  const [relationships, setRelationships] = useState<Relationship[]>([]);
+  const [dismissedKeys, setDismissedKeys] = useState<Set<string>>(() => new Set());
+  const [editorInit, setEditorInit] = useState<EditorInit | null>(null);
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+  const [selectedDiagramId, setSelectedDiagramId] = useState<string | null>(null);
+
+  // ── Editor helpers ────────────────────────────────────────────────────────
+  const openCreate = useCallback(() => setEditorInit({}), []);
+
+  const openEdit = useCallback((rel: Relationship) => {
+    const dsA = datasets.find(d => d.id === rel.datasetAId);
+    const dsB = datasets.find(d => d.id === rel.datasetBId);
+    if (!dsA || !dsB) return;
+    setEditorInit({
+      existingId: rel.id,
+      datasetAId: rel.datasetAId,
+      colA: rel.colA,
+      datasetBId: rel.datasetBId,
+      colB: rel.colB,
+    });
+  }, [datasets]);
+
+  const saveRelationship = useCallback((rel: Relationship) => {
+    setRelationships(prev => {
+      const idx = prev.findIndex(r => r.id === rel.id);
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = rel;
+        return next;
+      }
+      return [...prev, rel];
+    });
+    setEditorInit(null);
+  }, []);
+
+  const deleteRelationship = useCallback((id: string) => {
+    setRelationships(prev => prev.filter(r => r.id !== id));
+    setConfirmingDeleteId(null);
+    if (selectedDiagramId === id) setSelectedDiagramId(null);
+  }, [selectedDiagramId]);
+
+  // ── Suggestion helpers ────────────────────────────────────────────────────
+  const dismissKey = (dsAId: string, dsBId: string, suggestionId: string) =>
+    `${dsAId}||${dsBId}||${suggestionId}`;
+
+  const acceptSuggestion = useCallback(
+    (s: Suggestion, dsA: Dataset, dsB: Dataset) => {
+      const key = dismissKey(dsA.id, dsB.id, s.id);
+      setDismissedKeys(prev => new Set([...prev, key]));
+      setRelationships(prev => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          datasetAId: dsA.id,
+          datasetBId: dsB.id,
+          colA: s.colA,
+          colB: s.colB,
+          confidence: s.confidence,
+        },
+      ]);
+    },
+    [],
+  );
+
+  const editSuggestion = useCallback(
+    (s: Suggestion, dsA: Dataset, dsB: Dataset) => {
+      setEditorInit({
+        datasetAId: dsA.id,
+        colA: s.colA,
+        datasetBId: dsB.id,
+        colB: s.colB,
+      });
+    },
+    [],
+  );
+
+  const ignoreSuggestion = useCallback(
+    (s: Suggestion, dsA: Dataset, dsB: Dataset) => {
+      const key = dismissKey(dsA.id, dsB.id, s.id);
+      setDismissedKeys(prev => new Set([...prev, key]));
+    },
+    [],
+  );
 
   return (
     <div
@@ -91,35 +167,43 @@ export default function RelationshipManager() {
       <AppHeader isInWorkspace={hasDatasets} />
 
       <main className="flex-1 overflow-y-auto">
-        <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 space-y-8">
+        <div className="max-w-5xl mx-auto px-4 md:px-6 py-8 space-y-8">
+
           {/* ── Page header ── */}
-          <div className="flex items-start gap-4">
-            <div className="p-2.5 rounded-xl bg-primary text-primary-foreground shadow-sm shrink-0 mt-0.5">
-              <GitBranch className="w-5 h-5" />
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <div className="p-2.5 rounded-xl bg-primary text-primary-foreground shadow-sm shrink-0 mt-0.5">
+                <GitBranch className="w-5 h-5" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                  {t.relationships.pageTitle}
+                </h1>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  {t.relationships.pageSubtitle}
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                {t.relationships.pageTitle}
-              </h1>
-              <p className="text-sm text-muted-foreground mt-0.5">
-                {t.relationships.pageSubtitle}
-              </p>
-            </div>
+            {hasDatasets && (
+              <button
+                onClick={openCreate}
+                className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors shadow-sm"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">{t.relationships.addRelationship}</span>
+              </button>
+            )}
           </div>
 
-          {/* ── No datasets state ── */}
+          {/* ── No datasets ── */}
           {!hasDatasets && (
             <div className="flex flex-col items-center justify-center gap-5 py-20 border-2 border-dashed border-border rounded-xl">
               <div className="p-4 rounded-full bg-muted">
                 <Database className="w-8 h-8 text-muted-foreground" />
               </div>
               <div className="text-center max-w-sm">
-                <p className="font-medium text-foreground mb-1">
-                  {t.relationships.noDatasets}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {t.relationships.noDatasetsSub}
-                </p>
+                <p className="font-medium text-foreground mb-1">{t.relationships.noDatasets}</p>
+                <p className="text-sm text-muted-foreground">{t.relationships.noDatasetsSub}</p>
               </div>
               <Link
                 href="/"
@@ -132,223 +216,443 @@ export default function RelationshipManager() {
 
           {hasDatasets && (
             <>
-              {/* ── Dataset selectors ── */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <DatasetSelectorPanel
-                  sideLabel={t.relationships.datasetA}
-                  sideKey="A"
-                  datasets={datasets}
-                  selectedId={selectedIdA}
-                  onSelect={handleSelectA}
-                  columns={columnsA}
-                  selectedColIdx={selectedColIdxA}
-                  onSelectCol={setSelectedColIdxA}
-                  excludeId={selectedIdB}
-                />
-                <DatasetSelectorPanel
-                  sideLabel={t.relationships.datasetB}
-                  sideKey="B"
-                  datasets={datasets}
-                  selectedId={selectedIdB}
-                  onSelect={handleSelectB}
-                  columns={columnsB}
-                  selectedColIdx={selectedColIdxB}
-                  onSelectCol={setSelectedColIdxB}
-                  excludeId={selectedIdA}
-                />
-              </div>
-
-              {/* ── Suggested relationships ── */}
-              <SuggestionsSection
-                suggestions={suggestions}
-                datasetA={datasetA}
-                datasetB={datasetB}
+              {/* ── Current Relationships ── */}
+              <CurrentRelationshipsSection
+                relationships={relationships}
+                datasets={datasets}
+                confirmingDeleteId={confirmingDeleteId}
+                onEdit={openEdit}
+                onDeleteClick={(id) => setConfirmingDeleteId(id === confirmingDeleteId ? null : id)}
+                onDeleteConfirm={deleteRelationship}
+                onDeleteCancel={() => setConfirmingDeleteId(null)}
               />
 
-              {/* ── Relationship diagram ── */}
+              {/* ── Relationship Diagram ── */}
               <DiagramSection
-                datasetA={datasetA}
-                datasetB={datasetB}
-                colA={
-                  selectedColIdxA !== null
-                    ? columnsA.find((c) => c.index === selectedColIdxA) ?? null
-                    : null
-                }
-                colB={
-                  selectedColIdxB !== null
-                    ? columnsB.find((c) => c.index === selectedColIdxB) ?? null
-                    : null
-                }
-                suggestionsCount={suggestions.length}
+                relationships={relationships}
+                datasets={datasets}
+                selectedId={selectedDiagramId}
+                onSelect={(id) => setSelectedDiagramId(prev => prev === id ? null : id)}
+                onEdit={openEdit}
+                onDelete={deleteRelationship}
+              />
+
+              {/* ── Explore Suggestions ── */}
+              <ExploreSuggestionsSection
+                datasets={datasets}
+                dismissedKeys={dismissedKeys}
+                dismissKey={dismissKey}
+                onAccept={acceptSuggestion}
+                onEdit={editSuggestion}
+                onIgnore={ignoreSuggestion}
               />
             </>
           )}
         </div>
       </main>
+
+      {/* ── Editor modal ── */}
+      {editorInit !== null && (
+        <RelationshipEditorModal
+          datasets={datasets}
+          init={editorInit}
+          onSave={saveRelationship}
+          onClose={() => setEditorInit(null)}
+        />
+      )}
     </div>
   );
 }
 
-// ─── Dataset selector panel ───────────────────────────────────────────────────
+// ─── Current Relationships section ───────────────────────────────────────────
 
-interface DatasetSelectorPanelProps {
-  sideLabel: string;
-  sideKey: "A" | "B";
+interface CurrentRelsSectionProps {
+  relationships: Relationship[];
+  datasets: Dataset[];
+  confirmingDeleteId: string | null;
+  onEdit: (rel: Relationship) => void;
+  onDeleteClick: (id: string) => void;
+  onDeleteConfirm: (id: string) => void;
+  onDeleteCancel: () => void;
+}
+
+function CurrentRelationshipsSection({
+  relationships,
+  datasets,
+  confirmingDeleteId,
+  onEdit,
+  onDeleteClick,
+  onDeleteConfirm,
+  onDeleteCancel,
+}: CurrentRelsSectionProps) {
+  const { t } = useLocale();
+
+  return (
+    <section className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
+      <div className="px-5 py-4 border-b border-border flex items-center gap-3 bg-muted/20">
+        <GitBranch className="w-4 h-4 text-primary shrink-0" />
+        <div className="flex-1 min-w-0">
+          <h2 className="text-sm font-semibold text-foreground">
+            {t.relationships.currentRelationships.title}
+          </h2>
+          <p className="text-xs text-muted-foreground mt-px">
+            {t.relationships.currentRelationships.subtitle}
+          </p>
+        </div>
+        {relationships.length > 0 && (
+          <span className="shrink-0 text-xs font-semibold bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full tabular-nums">
+            {relationships.length}
+          </span>
+        )}
+      </div>
+
+      {relationships.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-2 py-10 text-muted-foreground">
+          <Link2Off className="w-7 h-7 opacity-25" />
+          <p className="text-sm font-medium">{t.relationships.currentRelationships.empty}</p>
+          <p className="text-xs text-muted-foreground/70">{t.relationships.currentRelationships.emptySub}</p>
+        </div>
+      ) : (
+        <div className="divide-y divide-border">
+          {relationships.map((rel) => {
+            const dsA = datasets.find(d => d.id === rel.datasetAId);
+            const dsB = datasets.find(d => d.id === rel.datasetBId);
+            if (!dsA || !dsB) return null;
+            const isConfirming = confirmingDeleteId === rel.id;
+            return (
+              <RelationshipRow
+                key={rel.id}
+                relationship={rel}
+                dsA={dsA}
+                dsB={dsB}
+                isConfirming={isConfirming}
+                onEdit={() => onEdit(rel)}
+                onDeleteClick={() => onDeleteClick(rel.id)}
+                onDeleteConfirm={() => onDeleteConfirm(rel.id)}
+                onDeleteCancel={onDeleteCancel}
+              />
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
+interface RelationshipRowProps {
+  relationship: Relationship;
+  dsA: Dataset;
+  dsB: Dataset;
+  isConfirming: boolean;
+  onEdit: () => void;
+  onDeleteClick: () => void;
+  onDeleteConfirm: () => void;
+  onDeleteCancel: () => void;
+}
+
+function RelationshipRow({
+  relationship,
+  dsA,
+  dsB,
+  isConfirming,
+  onEdit,
+  onDeleteClick,
+  onDeleteConfirm,
+  onDeleteCancel,
+}: RelationshipRowProps) {
+  const { t } = useLocale();
+  const { colA, colB, confidence } = relationship;
+
+  return (
+    <div className="px-5 py-3.5 flex flex-col sm:flex-row sm:items-center gap-3">
+      {/* Confidence badge (if from suggestion) */}
+      {confidence && (
+        <div className="shrink-0">
+          <ConfidenceBadge confidence={confidence} />
+        </div>
+      )}
+
+      {/* Column match */}
+      <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
+        <ColChip fileName={dsA.file.fileName} col={colA} side="A" />
+        <ArrowLeftRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+        <ColChip fileName={dsB.file.fileName} col={colB} side="B" />
+      </div>
+
+      {/* Actions */}
+      <div className="shrink-0 flex items-center gap-1.5">
+        {isConfirming ? (
+          <>
+            <span className="text-xs font-medium text-red-600 me-1">
+              {t.relationships.confirmDelete}
+            </span>
+            <button
+              onClick={onDeleteConfirm}
+              className="px-2.5 py-1.5 rounded-lg bg-red-600 text-white text-xs font-semibold hover:bg-red-700 transition-colors"
+            >
+              {t.relationships.deleteRelationship}
+            </button>
+            <button
+              onClick={onDeleteCancel}
+              className="px-2.5 py-1.5 rounded-lg border border-border text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
+            >
+              {t.relationships.cancelDelete}
+            </button>
+          </>
+        ) : (
+          <>
+            <IconButton onClick={onEdit} title={t.relationships.editRelationship}>
+              <Pencil className="w-3.5 h-3.5" />
+            </IconButton>
+            <IconButton
+              onClick={onDeleteClick}
+              title={t.relationships.deleteRelationship}
+              danger
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </IconButton>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Diagram section ──────────────────────────────────────────────────────────
+
+interface DiagramSectionProps {
+  relationships: Relationship[];
   datasets: Dataset[];
   selectedId: string | null;
   onSelect: (id: string) => void;
-  columns: ColumnInfo[];
-  selectedColIdx: number | null;
-  onSelectCol: (idx: number) => void;
-  excludeId: string | null;
+  onEdit: (rel: Relationship) => void;
+  onDelete: (id: string) => void;
 }
 
-function DatasetSelectorPanel({
-  sideLabel,
-  sideKey,
+function DiagramSection({
+  relationships,
   datasets,
   selectedId,
   onSelect,
-  columns,
-  selectedColIdx,
-  onSelectCol,
-  excludeId,
-}: DatasetSelectorPanelProps) {
+  onEdit,
+  onDelete,
+}: DiagramSectionProps) {
   const { t } = useLocale();
-  const available = datasets.filter((d) => d.id !== excludeId);
-  const selected = datasets.find((d) => d.id === selectedId) ?? null;
-
-  const accentClass =
-    sideKey === "A"
-      ? "border-blue-200 bg-blue-500/8"
-      : "border-violet-200 bg-violet-500/8";
-  const accentText = sideKey === "A" ? "text-blue-700" : "text-violet-700";
-  const accentBg = sideKey === "A" ? "bg-blue-500" : "bg-violet-500";
 
   return (
-    <div className="flex flex-col rounded-xl border border-border bg-card overflow-hidden shadow-sm">
-      {/* Header */}
-      <div
-        className={cn(
-          "px-4 py-3 border-b border-border flex items-center gap-2.5",
-          sideKey === "A" ? "bg-blue-50/60" : "bg-violet-50/60",
+    <section className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
+      <div className="px-5 py-4 border-b border-border flex items-center justify-between gap-3 bg-muted/20">
+        <div>
+          <h2 className="text-sm font-semibold text-foreground">{t.relationships.diagram.title}</h2>
+          <p className="text-xs text-muted-foreground mt-px">{t.relationships.diagram.subtitle}</p>
+        </div>
+        {relationships.length > 0 && (
+          <span className="text-[10px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full shrink-0">
+            {t.relationships.diagram.clickHint}
+          </span>
         )}
-      >
+      </div>
+
+      {relationships.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-2 py-12">
+          <div className="flex items-center gap-3 opacity-20">
+            <div className="w-16 h-10 rounded-lg border-2 border-blue-400 bg-blue-50" />
+            <div className="w-8 border-t-2 border-dashed border-muted-foreground" />
+            <div className="w-5 h-5 rounded-full border-2 border-muted-foreground flex items-center justify-center">
+              <ArrowLeftRight className="w-2.5 h-2.5 text-muted-foreground" />
+            </div>
+            <div className="w-8 border-t-2 border-dashed border-muted-foreground" />
+            <div className="w-16 h-10 rounded-lg border-2 border-violet-400 bg-violet-50" />
+          </div>
+          <p className="text-sm font-medium text-muted-foreground mt-1">{t.relationships.diagram.empty}</p>
+          <p className="text-xs text-muted-foreground/60">{t.relationships.diagram.emptySub}</p>
+        </div>
+      ) : (
+        <div className="p-6 flex flex-col gap-3">
+          {relationships.map((rel) => {
+            const dsA = datasets.find(d => d.id === rel.datasetAId);
+            const dsB = datasets.find(d => d.id === rel.datasetBId);
+            if (!dsA || !dsB) return null;
+            const isSelected = selectedId === rel.id;
+
+            return (
+              <DiagramCard
+                key={rel.id}
+                relationship={rel}
+                dsA={dsA}
+                dsB={dsB}
+                isSelected={isSelected}
+                onSelect={() => onSelect(rel.id)}
+                onEdit={() => { onEdit(rel); }}
+                onDelete={() => onDelete(rel.id)}
+              />
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
+interface DiagramCardProps {
+  relationship: Relationship;
+  dsA: Dataset;
+  dsB: Dataset;
+  isSelected: boolean;
+  onSelect: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}
+
+function DiagramCard({
+  relationship,
+  dsA,
+  dsB,
+  isSelected,
+  onSelect,
+  onEdit,
+  onDelete,
+}: DiagramCardProps) {
+  const { t } = useLocale();
+  const { colA, colB } = relationship;
+
+  return (
+    <button
+      onClick={onSelect}
+      className={cn(
+        "w-full text-start rounded-xl border-2 overflow-hidden transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        isSelected
+          ? "border-primary shadow-md shadow-primary/10"
+          : "border-border hover:border-primary/30 hover:shadow-sm",
+      )}
+    >
+      {/* Visual connection */}
+      <div className="flex items-stretch">
+        {/* Node A */}
+        <div className="flex-1 min-w-0">
+          <div className="px-3 py-1.5 bg-blue-500 flex items-center gap-1.5">
+            <Database className="w-3 h-3 text-white/70 shrink-0" />
+            <span className="text-[10px] text-white font-bold uppercase tracking-wider truncate">
+              {baseName(dsA.file.fileName)}
+            </span>
+          </div>
+          <div className="px-3 py-2 bg-blue-50 dark:bg-blue-950/30 flex items-center gap-1.5">
+            <ColTypeIcon type={colA.type} className="text-blue-500 shrink-0" />
+            <span className="text-xs font-semibold text-blue-800 dark:text-blue-300 truncate">
+              {colA.name}
+            </span>
+          </div>
+        </div>
+
+        {/* Connector */}
         <div
           className={cn(
-            "w-6 h-6 rounded-md flex items-center justify-center text-white text-xs font-bold shrink-0",
-            accentBg,
+            "shrink-0 flex flex-col items-center justify-center px-3 gap-1 border-x border-border transition-colors duration-150",
+            isSelected ? "bg-primary/5 border-primary/20" : "bg-muted/30",
           )}
         >
-          {sideKey}
-        </div>
-        <span className="font-semibold text-sm text-foreground">{sideLabel}</span>
-        {selected && (
-          <span className="ms-auto text-xs text-muted-foreground">
-            {tpl(t.datasets.rows, { n: (selected.file.rowCount - 1).toLocaleString() })}{" "}
-            · {tpl(t.datasets.cols, { n: selected.file.colCount.toLocaleString() })}
-          </span>
-        )}
-      </div>
-
-      {/* Dataset dropdown */}
-      <div className="p-3 border-b border-border bg-muted/20">
-        <div className="relative">
-          <select
-            value={selectedId ?? ""}
-            onChange={(e) => e.target.value && onSelect(e.target.value)}
-            className="w-full appearance-none bg-card border border-border rounded-lg ps-3 pe-8 py-2 text-sm font-medium text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
-          >
-            <option value="" disabled>
-              {t.relationships.selectDataset}
-            </option>
-            {available.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.file.fileName}
-              </option>
-            ))}
-          </select>
-          <ChevronDown className="absolute end-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-        </div>
-      </div>
-
-      {/* Column list */}
-      <div className="flex-1">
-        <div className="px-3 py-2 flex items-center justify-between border-b border-border/60">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-            {t.relationships.columnsTitle}
-          </span>
-          {columns.length > 0 && (
-            <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full tabular-nums">
-              {columns.length}
+          <ArrowLeftRight
+            className={cn(
+              "w-4 h-4 transition-colors duration-150",
+              isSelected ? "text-primary" : "text-muted-foreground/50",
+            )}
+          />
+          {isSelected && (
+            <span className="text-[9px] font-semibold text-primary uppercase tracking-wider">
+              JOIN
             </span>
           )}
         </div>
 
-        {!selected ? (
-          <div className="flex flex-col items-center justify-center gap-2 py-10 text-muted-foreground">
-            <Database className="w-7 h-7 opacity-30" />
-            <p className="text-xs text-center px-4">{t.relationships.noColumns}</p>
+        {/* Node B */}
+        <div className="flex-1 min-w-0">
+          <div className="px-3 py-1.5 bg-violet-500 flex items-center gap-1.5">
+            <Database className="w-3 h-3 text-white/70 shrink-0" />
+            <span className="text-[10px] text-white font-bold uppercase tracking-wider truncate">
+              {baseName(dsB.file.fileName)}
+            </span>
           </div>
-        ) : (
-          <div className="overflow-y-auto max-h-64">
-            {columns.map((col) => {
-              const isSelected = col.index === selectedColIdx;
-              return (
-                <button
-                  key={col.index}
-                  onClick={() => onSelectCol(col.index)}
-                  className={cn(
-                    "w-full flex items-center gap-2.5 px-3 py-2 text-start transition-colors duration-100",
-                    "border-b border-border/40 last:border-0",
-                    isSelected
-                      ? cn("bg-primary/5 border-s-2 border-s-primary", accentClass)
-                      : "hover:bg-muted/50",
-                  )}
-                >
-                  <ColTypeIcon type={col.type} />
-                  <span
-                    className={cn(
-                      "flex-1 text-sm font-medium truncate",
-                      isSelected ? accentText : "text-foreground",
-                    )}
-                    title={col.name}
-                  >
-                    {col.name}
-                  </span>
-                  <ColTypeBadge type={col.type} />
-                  {isSelected && (
-                    <Check className={cn("w-3.5 h-3.5 shrink-0", accentText)} />
-                  )}
-                </button>
-              );
-            })}
+          <div className="px-3 py-2 bg-violet-50 dark:bg-violet-950/30 flex items-center gap-1.5">
+            <ColTypeIcon type={colB.type} className="text-violet-500 shrink-0" />
+            <span className="text-xs font-semibold text-violet-800 dark:text-violet-300 truncate">
+              {colB.name}
+            </span>
           </div>
-        )}
+        </div>
       </div>
-    </div>
+
+      {/* Action bar — only when selected */}
+      {isSelected && (
+        <div
+          className="flex items-center justify-end gap-2 px-4 py-2.5 bg-primary/5 border-t border-primary/15"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={onEdit}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-border bg-card hover:bg-muted text-foreground transition-colors"
+          >
+            <Pencil className="w-3 h-3" />
+            {t.relationships.editRelationship}
+          </button>
+          <button
+            onClick={onDelete}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-600 text-white hover:bg-red-700 transition-colors"
+          >
+            <Trash2 className="w-3 h-3" />
+            {t.relationships.deleteRelationship}
+          </button>
+        </div>
+      )}
+    </button>
   );
 }
 
-// ─── Suggestions section ──────────────────────────────────────────────────────
+// ─── Explore Suggestions section ──────────────────────────────────────────────
 
-interface SuggestionsSectionProps {
-  suggestions: Suggestion[];
-  datasetA: Dataset | null;
-  datasetB: Dataset | null;
+interface ExploreSuggestionsSectionProps {
+  datasets: Dataset[];
+  dismissedKeys: Set<string>;
+  dismissKey: (dsAId: string, dsBId: string, suggestionId: string) => string;
+  onAccept: (s: Suggestion, dsA: Dataset, dsB: Dataset) => void;
+  onEdit: (s: Suggestion, dsA: Dataset, dsB: Dataset) => void;
+  onIgnore: (s: Suggestion, dsA: Dataset, dsB: Dataset) => void;
 }
 
-function SuggestionsSection({
-  suggestions,
-  datasetA,
-  datasetB,
-}: SuggestionsSectionProps) {
+function ExploreSuggestionsSection({
+  datasets,
+  dismissedKeys,
+  dismissKey,
+  onAccept,
+  onEdit,
+  onIgnore,
+}: ExploreSuggestionsSectionProps) {
   const { t } = useLocale();
-  const bothSelected = !!datasetA && !!datasetB;
+  const [selectedIdA, setSelectedIdA] = useState<string>("");
+  const [selectedIdB, setSelectedIdB] = useState<string>("");
+
+  const dsA = datasets.find(d => d.id === selectedIdA) ?? null;
+  const dsB = datasets.find(d => d.id === selectedIdB) ?? null;
+
+  const colsA = useMemo(() => dsA ? getColumns(dsA) : [], [dsA]);
+  const colsB = useMemo(() => dsB ? getColumns(dsB) : [], [dsB]);
+
+  const suggestions = useMemo(() => {
+    if (!dsA || !dsB) return [];
+    return computeSuggestions(colsA, colsB);
+  }, [colsA, colsB, dsA, dsB]);
+
+  const visibleSuggestions = useMemo(() => {
+    if (!dsA || !dsB) return suggestions;
+    return suggestions.filter(
+      (s) => !dismissedKeys.has(dismissKey(dsA.id, dsB.id, s.id)),
+    );
+  }, [suggestions, dismissedKeys, dsA, dsB, dismissKey]);
+
+  const bothSelected = !!dsA && !!dsB;
 
   return (
     <section className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
-      {/* Section header */}
+      {/* Header */}
       <div className="px-5 py-4 border-b border-border flex items-center gap-3 bg-muted/20">
         <Sparkles className="w-4 h-4 text-primary shrink-0" />
         <div className="flex-1 min-w-0">
@@ -359,16 +663,36 @@ function SuggestionsSection({
             {t.relationships.suggestions.subtitle}
           </p>
         </div>
-        {bothSelected && suggestions.length > 0 && (
+        {bothSelected && visibleSuggestions.length > 0 && (
           <span className="shrink-0 text-xs font-semibold bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full tabular-nums">
-            {tpl(t.relationships.suggestions.countLabel, {
-              n: suggestions.length,
-            })}
+            {tpl(t.relationships.suggestions.countLabel, { n: visibleSuggestions.length })}
           </span>
         )}
       </div>
 
-      {/* Body */}
+      {/* Dataset pair selector */}
+      <div className="px-5 py-4 border-b border-border bg-muted/10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <DatasetSelect
+            label={t.relationships.datasetA}
+            sideKey="A"
+            datasets={datasets}
+            value={selectedIdA}
+            excludeId={selectedIdB}
+            onChange={(id) => { setSelectedIdA(id); }}
+          />
+          <DatasetSelect
+            label={t.relationships.datasetB}
+            sideKey="B"
+            datasets={datasets}
+            value={selectedIdB}
+            excludeId={selectedIdA}
+            onChange={(id) => { setSelectedIdB(id); }}
+          />
+        </div>
+      </div>
+
+      {/* Suggestions list */}
       <div className="divide-y divide-border">
         {!bothSelected && (
           <EmptyState
@@ -376,21 +700,26 @@ function SuggestionsSection({
             message={t.relationships.suggestions.noneSelected}
           />
         )}
-
-        {bothSelected && suggestions.length === 0 && (
+        {bothSelected && visibleSuggestions.length === 0 && (
           <EmptyState
             icon={<Link2Off className="w-7 h-7 opacity-25" />}
-            message={t.relationships.suggestions.empty}
+            message={
+              suggestions.length > 0
+                ? "All suggestions have been accepted or dismissed."
+                : t.relationships.suggestions.empty
+            }
           />
         )}
-
         {bothSelected &&
-          suggestions.map((s) => (
-            <SuggestionCard
+          visibleSuggestions.map((s) => (
+            <SuggestionRow
               key={s.id}
               suggestion={s}
-              fileNameA={datasetA!.file.fileName}
-              fileNameB={datasetB!.file.fileName}
+              dsA={dsA!}
+              dsB={dsB!}
+              onAccept={() => onAccept(s, dsA!, dsB!)}
+              onEdit={() => onEdit(s, dsA!, dsB!)}
+              onIgnore={() => onIgnore(s, dsA!, dsB!)}
             />
           ))}
       </div>
@@ -398,293 +727,393 @@ function SuggestionsSection({
   );
 }
 
-interface SuggestionCardProps {
-  suggestion: Suggestion;
-  fileNameA: string;
-  fileNameB: string;
+interface DatasetSelectProps {
+  label: string;
+  sideKey: "A" | "B";
+  datasets: Dataset[];
+  value: string;
+  excludeId: string;
+  onChange: (id: string) => void;
 }
 
-function SuggestionCard({
-  suggestion,
-  fileNameA,
-  fileNameB,
-}: SuggestionCardProps) {
+function DatasetSelect({ label, sideKey, datasets, value, excludeId, onChange }: DatasetSelectProps) {
+  const { t } = useLocale();
+  const available = datasets.filter(d => d.id !== excludeId);
+  const accentBg = sideKey === "A" ? "bg-blue-500" : "bg-violet-500";
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center gap-2">
+        <div className={cn("w-5 h-5 rounded flex items-center justify-center text-white text-[10px] font-bold shrink-0", accentBg)}>
+          {sideKey}
+        </div>
+        <span className="text-xs font-semibold text-muted-foreground">{label}</span>
+      </div>
+      <div className="relative">
+        <select
+          value={value}
+          onChange={(e) => e.target.value && onChange(e.target.value)}
+          className="w-full appearance-none bg-card border border-border rounded-lg ps-3 pe-8 py-2 text-sm font-medium text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
+        >
+          <option value="" disabled>{t.relationships.selectDataset}</option>
+          {available.map(d => (
+            <option key={d.id} value={d.id}>{d.file.fileName}</option>
+          ))}
+        </select>
+        <ChevronDown className="absolute end-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+      </div>
+    </div>
+  );
+}
+
+interface SuggestionRowProps {
+  suggestion: Suggestion;
+  dsA: Dataset;
+  dsB: Dataset;
+  onAccept: () => void;
+  onEdit: () => void;
+  onIgnore: () => void;
+}
+
+function SuggestionRow({ suggestion, dsA, dsB, onAccept, onEdit, onIgnore }: SuggestionRowProps) {
   const { t } = useLocale();
   const { colA, colB, confidence, reasonCode } = suggestion;
-
   const reasonStr = buildReasonString(reasonCode, colA.type, colB.type, t);
 
   return (
     <div className="px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-4">
-      {/* Confidence badge */}
+      {/* Confidence */}
       <div className="shrink-0">
         <ConfidenceBadge confidence={confidence} />
       </div>
 
-      {/* Column match display */}
+      {/* Match display */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Column A */}
-          <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 rounded-lg px-2.5 py-1">
-            <ColTypeIcon type={colA.type} className="text-blue-600" />
-            <div className="min-w-0">
-              <p className="text-xs text-blue-500 font-medium leading-none mb-0.5 truncate max-w-[120px]">
-                {baseName(fileNameA)}
-              </p>
-              <p className="text-sm font-semibold text-blue-800 truncate max-w-[120px]">
-                {colA.name}
-              </p>
-            </div>
-          </div>
-
-          {/* Arrow */}
-          <ArrowLeftRight className="w-4 h-4 text-muted-foreground shrink-0" />
-
-          {/* Column B */}
-          <div className="flex items-center gap-1.5 bg-violet-50 border border-violet-200 rounded-lg px-2.5 py-1">
-            <ColTypeIcon type={colB.type} className="text-violet-600" />
-            <div className="min-w-0">
-              <p className="text-xs text-violet-500 font-medium leading-none mb-0.5 truncate max-w-[120px]">
-                {baseName(fileNameB)}
-              </p>
-              <p className="text-sm font-semibold text-violet-800 truncate max-w-[120px]">
-                {colB.name}
-              </p>
-            </div>
-          </div>
+          <ColChip fileName={dsA.file.fileName} col={colA} side="A" />
+          <ArrowLeftRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+          <ColChip fileName={dsB.file.fileName} col={colB} side="B" />
         </div>
-
-        {/* Reason */}
-        <p className="text-xs text-muted-foreground mt-2">{reasonStr}</p>
+        <p className="text-xs text-muted-foreground mt-1.5">{reasonStr}</p>
       </div>
 
-      {/* Create button (disabled) */}
-      <div className="shrink-0">
+      {/* Actions */}
+      <div className="shrink-0 flex items-center gap-1.5 flex-wrap">
         <button
-          disabled
-          title={t.relationships.suggestions.createTooltip}
-          className="flex items-center gap-2 px-3.5 py-2 rounded-lg border border-border bg-muted/50 text-sm font-medium text-muted-foreground opacity-60 cursor-not-allowed select-none"
+          onClick={onAccept}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition-colors"
         >
-          <GitBranch className="w-3.5 h-3.5" />
-          {t.relationships.suggestions.createButton}
+          <CheckCircle2 className="w-3.5 h-3.5" />
+          {t.relationships.suggestions.accept}
+        </button>
+        <button
+          onClick={onEdit}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-card text-xs font-semibold text-foreground hover:bg-muted transition-colors"
+        >
+          <Pencil className="w-3.5 h-3.5" />
+          {t.relationships.suggestions.edit}
+        </button>
+        <button
+          onClick={onIgnore}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+        >
+          <X className="w-3.5 h-3.5" />
+          {t.relationships.suggestions.ignore}
         </button>
       </div>
     </div>
   );
 }
 
-// ─── Diagram section ──────────────────────────────────────────────────────────
+// ─── Relationship editor modal ─────────────────────────────────────────────────
 
-interface DiagramSectionProps {
-  datasetA: Dataset | null;
-  datasetB: Dataset | null;
-  colA: ColumnInfo | null;
-  colB: ColumnInfo | null;
-  suggestionsCount: number;
+interface RelationshipEditorModalProps {
+  datasets: Dataset[];
+  init: EditorInit;
+  onSave: (rel: Relationship) => void;
+  onClose: () => void;
 }
 
-function DiagramSection({
-  datasetA,
-  datasetB,
-  colA,
-  colB,
-}: DiagramSectionProps) {
+function RelationshipEditorModal({ datasets, init, onSave, onClose }: RelationshipEditorModalProps) {
   const { t } = useLocale();
+  const isEditing = !!init.existingId;
 
-  return (
-    <section className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
-      {/* Header */}
-      <div className="px-5 py-4 border-b border-border flex items-center justify-between bg-muted/20">
-        <div>
-          <h2 className="text-sm font-semibold text-foreground">
-            {t.relationships.diagram.title}
-          </h2>
-          <p className="text-xs text-muted-foreground mt-px">
-            {t.relationships.diagram.subtitle}
-          </p>
-        </div>
-        <span className="text-[10px] font-semibold uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full">
-          {t.relationships.diagram.comingSoon}
-        </span>
-      </div>
+  const [dsAId, setDsAId] = useState(init.datasetAId ?? "");
+  const [colA, setColA] = useState<ColumnInfo | null>(init.colA ?? null);
+  const [dsBId, setDsBId] = useState(init.datasetBId ?? "");
+  const [colB, setColB] = useState<ColumnInfo | null>(init.colB ?? null);
 
-      {/* Diagram canvas */}
-      <div className="p-8 flex items-center justify-center min-h-[260px]">
-        <div className="w-full max-w-2xl flex items-center gap-0">
-          {/* Node A */}
-          <DiagramNode dataset={datasetA} side="A" selectedCol={colA} />
+  const dsA = datasets.find(d => d.id === dsAId) ?? null;
+  const dsB = datasets.find(d => d.id === dsBId) ?? null;
+  const colsA = useMemo(() => dsA ? getColumns(dsA) : [], [dsA]);
+  const colsB = useMemo(() => dsB ? getColumns(dsB) : [], [dsB]);
 
-          {/* Connector */}
-          <div className="flex-1 flex items-center min-w-[80px]">
-            <div
-              className={cn(
-                "flex-1 border-t-2 transition-colors duration-300",
-                datasetA && datasetB
-                  ? "border-primary/40 border-dashed"
-                  : "border-border border-dashed",
-              )}
-            />
-            <div
-              className={cn(
-                "mx-2 w-9 h-9 rounded-full border-2 flex items-center justify-center shrink-0 transition-all duration-300",
-                datasetA && datasetB
-                  ? "border-primary/40 bg-primary/5"
-                  : "border-border bg-muted",
-              )}
-            >
-              <ArrowLeftRight
-                className={cn(
-                  "w-4 h-4 transition-colors duration-300",
-                  datasetA && datasetB ? "text-primary/60" : "text-muted-foreground/30",
-                )}
-              />
-            </div>
-            <div
-              className={cn(
-                "flex-1 border-t-2 transition-colors duration-300",
-                datasetA && datasetB
-                  ? "border-primary/40 border-dashed"
-                  : "border-border border-dashed",
-              )}
-            />
-          </div>
+  const canSave = !!dsA && !!dsB && dsAId !== dsBId && !!colA && !!colB;
 
-          {/* Node B */}
-          <DiagramNode dataset={datasetB} side="B" selectedCol={colB} />
-        </div>
-      </div>
+  const handleSave = () => {
+    if (!canSave) return;
+    onSave({
+      id: init.existingId ?? crypto.randomUUID(),
+      datasetAId: dsAId,
+      datasetBId: dsBId,
+      colA: colA!,
+      colB: colB!,
+    });
+  };
 
-      {/* Placeholder caption */}
-      {(!datasetA || !datasetB) && (
-        <div className="border-t border-border px-5 py-3 bg-muted/10">
-          <p className="text-xs text-center text-muted-foreground">
-            {t.relationships.diagram.placeholder}
-          </p>
-        </div>
-      )}
-    </section>
-  );
-}
-
-interface DiagramNodeProps {
-  dataset: Dataset | null;
-  side: "A" | "B";
-  selectedCol: ColumnInfo | null;
-}
-
-function DiagramNode({ dataset, side, selectedCol }: DiagramNodeProps) {
-  const { t } = useLocale();
-  const isA = side === "A";
-
-  if (!dataset) {
-    return (
-      <div
-        className={cn(
-          "w-40 h-32 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-2",
-          isA ? "border-blue-200" : "border-violet-200",
-        )}
-      >
-        <Database
-          className={cn(
-            "w-7 h-7 opacity-20",
-            isA ? "text-blue-500" : "text-violet-500",
-          )}
-        />
-        <span className="text-xs font-medium text-muted-foreground">
-          {isA ? t.relationships.datasetA : t.relationships.datasetB}
-        </span>
-      </div>
-    );
-  }
+  const handleChangeDsA = (id: string) => {
+    setDsAId(id);
+    setColA(null);
+  };
+  const handleChangeDsB = (id: string) => {
+    setDsBId(id);
+    setColB(null);
+  };
 
   return (
     <div
-      className={cn(
-        "w-44 rounded-xl border-2 overflow-hidden shadow-sm",
-        isA ? "border-blue-300" : "border-violet-300",
-      )}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      {/* Title bar */}
-      <div
-        className={cn(
-          "px-3 py-1.5 flex items-center gap-2",
-          isA ? "bg-blue-500" : "bg-violet-500",
-        )}
-      >
-        <Database className="w-3 h-3 text-white/80 shrink-0" />
-        <span className="text-[10px] text-white font-bold uppercase tracking-wider truncate">
-          {side}
-        </span>
-      </div>
-      {/* File name */}
-      <div
-        className={cn(
-          "px-3 py-2 border-b",
-          isA ? "bg-blue-50 border-blue-200" : "bg-violet-50 border-violet-200",
-        )}
-      >
-        <p
-          className={cn(
-            "text-xs font-semibold truncate",
-            isA ? "text-blue-900" : "text-violet-900",
-          )}
-          title={dataset.file.fileName}
-        >
-          {baseName(dataset.file.fileName)}
-        </p>
-        <p
-          className={cn(
-            "text-[10px] mt-px",
-            isA ? "text-blue-500" : "text-violet-500",
-          )}
-        >
-          {tpl(t.datasets.cols, { n: dataset.file.colCount })}
-          {" · "}
-          {tpl(t.datasets.rows, { n: (dataset.file.rowCount - 1).toLocaleString() })}
-        </p>
-      </div>
-      {/* Selected column */}
-      <div
-        className={cn(
-          "px-3 py-2",
-          isA ? "bg-blue-50/50" : "bg-violet-50/50",
-        )}
-      >
-        {selectedCol ? (
-          <div className="flex items-center gap-1.5">
-            <div
-              className={cn(
-                "w-1.5 h-1.5 rounded-full shrink-0",
-                isA ? "bg-blue-400" : "bg-violet-400",
-              )}
-            />
-            <span
-              className={cn(
-                "text-xs font-medium truncate",
-                isA ? "text-blue-700" : "text-violet-700",
-              )}
-            >
-              {selectedCol.name}
-            </span>
+      <div className="bg-card rounded-2xl border border-border shadow-2xl w-full max-w-md mx-4 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        {/* Header */}
+        <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <GitBranch className="w-4 h-4 text-primary" />
+            <h2 className="text-sm font-semibold text-foreground">
+              {isEditing ? t.relationships.editor.titleEdit : t.relationships.editor.titleCreate}
+            </h2>
           </div>
-        ) : (
-          <span className="text-[10px] text-muted-foreground italic">
-            {t.relationships.selectColumn}
-          </span>
-        )}
+          <button
+            onClick={onClose}
+            className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="p-5 space-y-4">
+          {/* Side A */}
+          <EditorSide
+            sideKey="A"
+            sideLabel={t.relationships.editor.datasetA}
+            colLabel={t.relationships.editor.columnA}
+            datasets={datasets.filter(d => d.id !== dsBId)}
+            dsValue={dsAId}
+            colValue={colA?.index ?? ""}
+            cols={colsA}
+            onChangeDs={handleChangeDsA}
+            onChangeCol={(idx) => setColA(colsA.find(c => c.index === idx) ?? null)}
+            selectDatasetLabel={t.relationships.editor.selectDataset}
+            selectColLabel={t.relationships.editor.selectColumn}
+          />
+
+          {/* Arrow divider */}
+          <div className="flex items-center gap-3 py-1">
+            <div className="flex-1 h-px bg-border" />
+            <ArrowLeftRight className="w-4 h-4 text-muted-foreground shrink-0" />
+            <div className="flex-1 h-px bg-border" />
+          </div>
+
+          {/* Side B */}
+          <EditorSide
+            sideKey="B"
+            sideLabel={t.relationships.editor.datasetB}
+            colLabel={t.relationships.editor.columnB}
+            datasets={datasets.filter(d => d.id !== dsAId)}
+            dsValue={dsBId}
+            colValue={colB?.index ?? ""}
+            cols={colsB}
+            onChangeDs={handleChangeDsB}
+            onChangeCol={(idx) => setColB(colsB.find(c => c.index === idx) ?? null)}
+            selectDatasetLabel={t.relationships.editor.selectDataset}
+            selectColLabel={t.relationships.editor.selectColumn}
+          />
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-4 border-t border-border flex items-center justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg border border-border text-sm font-medium text-muted-foreground hover:bg-muted transition-colors"
+          >
+            {t.relationships.editor.cancel}
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={!canSave}
+            className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {t.relationships.editor.save}
+          </button>
+        </div>
       </div>
     </div>
   );
 }
 
-// ─── Small reusable pieces ────────────────────────────────────────────────────
+interface EditorSideProps {
+  sideKey: "A" | "B";
+  sideLabel: string;
+  colLabel: string;
+  datasets: Dataset[];
+  dsValue: string;
+  colValue: number | "";
+  cols: ColumnInfo[];
+  onChangeDs: (id: string) => void;
+  onChangeCol: (idx: number) => void;
+  selectDatasetLabel: string;
+  selectColLabel: string;
+}
+
+function EditorSide({
+  sideKey,
+  sideLabel,
+  colLabel,
+  datasets,
+  dsValue,
+  colValue,
+  cols,
+  onChangeDs,
+  onChangeCol,
+  selectDatasetLabel,
+  selectColLabel,
+}: EditorSideProps) {
+  const isA = sideKey === "A";
+  const borderCls = isA ? "border-blue-200 dark:border-blue-900" : "border-violet-200 dark:border-violet-900";
+  const bgCls = isA ? "bg-blue-50/50 dark:bg-blue-950/20" : "bg-violet-50/50 dark:bg-violet-950/20";
+  const badgeBg = isA ? "bg-blue-500" : "bg-violet-500";
+  const headingCls = isA ? "text-blue-700 dark:text-blue-400" : "text-violet-700 dark:text-violet-400";
+
+  return (
+    <div className={cn("p-4 rounded-xl border space-y-3", borderCls, bgCls)}>
+      <div className="flex items-center gap-2">
+        <div className={cn("w-5 h-5 rounded flex items-center justify-center text-white text-[10px] font-bold shrink-0", badgeBg)}>
+          {sideKey}
+        </div>
+        <span className={cn("text-xs font-semibold", headingCls)}>{sideLabel}</span>
+      </div>
+
+      {/* Dataset select */}
+      <div className="space-y-1">
+        <div className="relative">
+          <select
+            value={dsValue}
+            onChange={(e) => e.target.value && onChangeDs(e.target.value)}
+            className="w-full appearance-none bg-card border border-border rounded-lg ps-3 pe-8 py-2 text-sm font-medium text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
+          >
+            <option value="" disabled>{selectDatasetLabel}</option>
+            {datasets.map(d => (
+              <option key={d.id} value={d.id}>{d.file.fileName}</option>
+            ))}
+          </select>
+          <ChevronDown className="absolute end-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+        </div>
+      </div>
+
+      {/* Column select */}
+      <div className="space-y-1">
+        <label className="text-[11px] font-medium text-muted-foreground">{colLabel}</label>
+        <div className="relative">
+          <select
+            value={colValue}
+            onChange={(e) => onChangeCol(Number(e.target.value))}
+            disabled={cols.length === 0}
+            className="w-full appearance-none bg-card border border-border rounded-lg ps-3 pe-8 py-2 text-sm font-medium text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <option value="" disabled>{selectColLabel}</option>
+            {cols.map(c => (
+              <option key={c.index} value={c.index}>{c.name}</option>
+            ))}
+          </select>
+          <ChevronDown className="absolute end-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Small reusable atoms ─────────────────────────────────────────────────────
+
+function ColChip({
+  fileName,
+  col,
+  side,
+}: {
+  fileName: string;
+  col: ColumnInfo;
+  side: "A" | "B";
+}) {
+  const isA = side === "A";
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-1.5 rounded-lg px-2.5 py-1 border",
+        isA
+          ? "bg-blue-50 border-blue-200 dark:bg-blue-950/30 dark:border-blue-900"
+          : "bg-violet-50 border-violet-200 dark:bg-violet-950/30 dark:border-violet-900",
+      )}
+    >
+      <ColTypeIcon
+        type={col.type}
+        className={isA ? "text-blue-500" : "text-violet-500"}
+      />
+      <div className="min-w-0">
+        <p
+          className={cn(
+            "text-[10px] font-medium leading-none mb-0.5 truncate max-w-[110px]",
+            isA ? "text-blue-500" : "text-violet-500",
+          )}
+        >
+          {baseName(fileName)}
+        </p>
+        <p
+          className={cn(
+            "text-xs font-semibold truncate max-w-[110px]",
+            isA ? "text-blue-800 dark:text-blue-300" : "text-violet-800 dark:text-violet-300",
+          )}
+        >
+          {col.name}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function IconButton({
+  onClick,
+  title,
+  danger = false,
+  children,
+}: {
+  onClick: () => void;
+  title: string;
+  danger?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      className={cn(
+        "p-1.5 rounded-lg border border-border transition-colors",
+        danger
+          ? "text-muted-foreground hover:text-red-600 hover:border-red-300 hover:bg-red-50 dark:hover:bg-red-950/30"
+          : "text-muted-foreground hover:text-foreground hover:bg-muted",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
 
 function ConfidenceBadge({ confidence }: { confidence: Confidence }) {
   const { t } = useLocale();
   const styles: Record<Confidence, string> = {
-    high: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    medium: "bg-amber-50 text-amber-700 border-amber-200",
-    low: "bg-sky-50 text-sky-700 border-sky-200",
+    high: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900",
+    medium: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900",
+    low: "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/30 dark:text-sky-400 dark:border-sky-900",
   };
   const dots: Record<Confidence, string> = {
     high: "bg-emerald-500",
@@ -705,53 +1134,16 @@ function ConfidenceBadge({ confidence }: { confidence: Confidence }) {
   );
 }
 
-function ColTypeIcon({
-  type,
-  className,
-}: {
-  type: ColType;
-  className?: string;
-}) {
+function ColTypeIcon({ type, className }: { type: ColType; className?: string }) {
   const base = cn("w-3.5 h-3.5 shrink-0", className);
-  if (type === "numeric") return <Hash className={cn(base, "text-blue-500")} />;
-  if (type === "categorical") return <Type className={cn(base, "text-violet-500")} />;
+  if (type === "numeric") return <Hash className={cn(base, !className && "text-blue-500")} />;
+  if (type === "categorical") return <Type className={cn(base, !className && "text-violet-500")} />;
   return <HelpCircle className={cn(base, "text-muted-foreground opacity-40")} />;
 }
 
-function ColTypeBadge({ type }: { type: ColType }) {
-  const { t } = useLocale();
-  const label =
-    type === "numeric"
-      ? t.relationships.typeNumeric
-      : type === "categorical"
-        ? t.relationships.typeCategorical
-        : t.relationships.typeUnknown;
-  const styles: Record<ColType, string> = {
-    numeric: "bg-blue-50 text-blue-600 border-blue-200",
-    categorical: "bg-violet-50 text-violet-600 border-violet-200",
-    unknown: "bg-muted text-muted-foreground border-border",
-  };
+function EmptyState({ icon, message }: { icon: React.ReactNode; message: string }) {
   return (
-    <span
-      className={cn(
-        "text-[9px] font-semibold uppercase tracking-wider px-1.5 py-px rounded border shrink-0",
-        styles[type],
-      )}
-    >
-      {label}
-    </span>
-  );
-}
-
-function EmptyState({
-  icon,
-  message,
-}: {
-  icon: React.ReactNode;
-  message: string;
-}) {
-  return (
-    <div className="flex flex-col items-center justify-center gap-3 py-14 text-muted-foreground">
+    <div className="flex flex-col items-center justify-center gap-3 py-12 text-muted-foreground">
       {icon}
       <p className="text-sm text-center max-w-xs px-4">{message}</p>
     </div>
@@ -761,46 +1153,25 @@ function EmptyState({
 // ─── Pure helpers ─────────────────────────────────────────────────────────────
 
 function getColumns(dataset: Dataset): ColumnInfo[] {
-  const { file } = dataset;
-  const numericSet = new Set(file.chartData?.numeric.map((s) => s.colIndex) ?? []);
-  const categoricalSet = new Set(
-    file.chartData?.categorical.map((s) => s.colIndex) ?? [],
-  );
-
-  return file.headers.map((name, index) => ({
+  const numericSet = new Set(dataset.file.chartData?.numeric.map((s) => s.colIndex) ?? []);
+  const categoricalSet = new Set(dataset.file.chartData?.categorical.map((s) => s.colIndex) ?? []);
+  return dataset.file.headers.map((name, index) => ({
     index,
     name,
-    type: numericSet.has(index)
-      ? "numeric"
-      : categoricalSet.has(index)
-        ? "categorical"
-        : "unknown",
+    type: numericSet.has(index) ? "numeric" : categoricalSet.has(index) ? "categorical" : "unknown",
   }));
 }
 
-/** Compare two column lists and find relationship candidates. */
-function computeSuggestions(
-  colsA: ColumnInfo[],
-  colsB: ColumnInfo[],
-): Suggestion[] {
+function computeSuggestions(colsA: ColumnInfo[], colsB: ColumnInfo[]): Suggestion[] {
   const results: Suggestion[] = [];
-
   for (const a of colsA) {
     for (const b of colsB) {
       const match = scorePair(a, b);
-      if (match) {
-        results.push({ id: `${a.index}:${b.index}`, colA: a, colB: b, ...match });
-      }
+      if (match) results.push({ id: `${a.index}:${b.index}`, colA: a, colB: b, ...match });
     }
   }
-
-  const CONFIDENCE_ORDER: Record<Confidence, number> = { high: 0, medium: 1, low: 2 };
-  results.sort(
-    (a, b) =>
-      CONFIDENCE_ORDER[a.confidence] - CONFIDENCE_ORDER[b.confidence] ||
-      a.colA.name.localeCompare(b.colA.name),
-  );
-
+  const ORDER: Record<Confidence, number> = { high: 0, medium: 1, low: 2 };
+  results.sort((a, b) => ORDER[a.confidence] - ORDER[b.confidence] || a.colA.name.localeCompare(b.colA.name));
   return results.slice(0, 20);
 }
 
@@ -811,40 +1182,21 @@ function norm(s: string): string {
   return s.toLowerCase().replace(NORM_RE, "");
 }
 
-function scorePair(
-  a: ColumnInfo,
-  b: ColumnInfo,
-): { confidence: Confidence; reasonCode: ReasonCode } | null {
+function scorePair(a: ColumnInfo, b: ColumnInfo): { confidence: Confidence; reasonCode: ReasonCode } | null {
   const na = norm(a.name);
   const nb = norm(b.name);
-  const sameType =
-    a.type !== "unknown" && b.type !== "unknown" && a.type === b.type;
+  const sameType = a.type !== "unknown" && b.type !== "unknown" && a.type === b.type;
 
-  // ── Exact name match ──────────────────────────────────────────────────────
-  if (na === nb) {
-    return {
-      confidence: sameType ? "high" : "medium",
-      reasonCode: sameType ? "exactSameType" : "exactDiffType",
-    };
-  }
-
-  // ── One name contains the other ───────────────────────────────────────────
-  if (na.includes(nb) || nb.includes(na)) {
-    return {
-      confidence: sameType ? "medium" : "low",
-      reasonCode: sameType ? "partialSameType" : "partialDiffType",
-    };
-  }
-
-  // ── Both are key-like columns with related bases ───────────────────────────
+  if (na === nb)
+    return { confidence: sameType ? "high" : "medium", reasonCode: sameType ? "exactSameType" : "exactDiffType" };
+  if (na.includes(nb) || nb.includes(na))
+    return { confidence: sameType ? "medium" : "low", reasonCode: sameType ? "partialSameType" : "partialDiffType" };
   if (KEY_SUFFIX.test(a.name) && KEY_SUFFIX.test(b.name)) {
     const baseA = na.replace(KEY_SUFFIX, "");
     const baseB = nb.replace(KEY_SUFFIX, "");
-    if (baseA === baseB || baseA.includes(baseB) || baseB.includes(baseA)) {
+    if (baseA === baseB || baseA.includes(baseB) || baseB.includes(baseA))
       return { confidence: "low", reasonCode: "similarKeys" };
-    }
   }
-
   return null;
 }
 
@@ -855,17 +1207,12 @@ function buildReasonString(
   t: ReturnType<typeof useLocale>["t"],
 ): string {
   const typeLabel = (type: ColType) =>
-    type === "numeric"
-      ? t.relationships.typeNumeric
-      : type === "categorical"
-        ? t.relationships.typeCategorical
-        : t.relationships.typeUnknown;
-
+    type === "numeric" ? t.relationships.typeNumeric
+    : type === "categorical" ? t.relationships.typeCategorical
+    : t.relationships.typeUnknown;
   const tA = typeLabel(typeA);
   const tB = typeLabel(typeB);
-  const template = t.relationships.suggestions.reasons[code];
-
-  return tpl(template, { type: tA, typeA: tA, typeB: tB });
+  return tpl(t.relationships.suggestions.reasons[code], { type: tA, typeA: tA, typeB: tB });
 }
 
 function baseName(fileName: string): string {
