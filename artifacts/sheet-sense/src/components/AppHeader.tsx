@@ -34,22 +34,11 @@ export function AppHeader({
   const { t } = useLocale();
   const [location] = useLocation();
 
-  const logoContent = (
-    <>
-      <div className="bg-primary p-2 rounded-lg text-primary-foreground shadow-sm">
-        <BarChart2 className="w-5 h-5" />
-      </div>
-      <span className="text-xl font-bold tracking-tight text-foreground hidden sm:inline">
-        {t.nav.appName}
-      </span>
-    </>
-  );
-
   return (
     <header className="h-16 shrink-0 border-b border-border bg-card sticky top-0 z-20 shadow-sm">
-      <div className="h-full px-4 md:px-5 flex items-center gap-2">
+      <div className="h-full px-4 md:px-6 flex items-center gap-3">
 
-        {/* Mobile hamburger — workspace only */}
+        {/* Mobile hamburger — workspace only, leftmost */}
         {isInWorkspace && showMenuButton && onMenuClick && (
           <button
             onClick={onMenuClick}
@@ -60,42 +49,41 @@ export function AppHeader({
           </button>
         )}
 
-        {/* Logo */}
-        {onLogoClick ? (
-          <button
-            onClick={onLogoClick}
-            className="flex items-center gap-2.5 shrink-0 hover:opacity-80 transition-opacity"
-            aria-label={t.nav.appName}
-          >
-            {logoContent}
-          </button>
-        ) : (
-          <Link href="/" className="flex items-center gap-2.5 shrink-0">
-            {logoContent}
-          </Link>
-        )}
+        {/* ── Left group ────────────────────────────────────────────────────── */}
+        <div className="flex items-center gap-3 shrink-0">
 
-        {/* ── Workspace nav ── */}
-        {isInWorkspace && (
-          <nav className="ms-3 flex items-center gap-0.5" aria-label="Main navigation">
-            <NavLink href="/" active={location === "/"}>
-              <LayoutDashboard className="w-3.5 h-3.5 shrink-0" />
-              <span className="hidden sm:inline">{t.nav.workspace}</span>
-            </NavLink>
-            <NavLink href="/relationships" active={location === "/relationships"}>
-              <GitBranch className="w-3.5 h-3.5 shrink-0" />
-              <span className="hidden sm:inline">{t.nav.relationships}</span>
-            </NavLink>
-          </nav>
-        )}
+          {/* Logo — icon only appears in workspace */}
+          {onLogoClick ? (
+            <button
+              onClick={onLogoClick}
+              className="flex items-center gap-2.5 hover:opacity-80 transition-opacity"
+              aria-label={t.nav.appName}
+            >
+              {isInWorkspace && (
+                <div className="bg-primary p-2 rounded-lg text-primary-foreground shadow-sm">
+                  <BarChart2 className="w-5 h-5" />
+                </div>
+              )}
+              <span className="text-xl font-bold tracking-tight text-foreground hidden sm:inline">
+                {t.nav.appName}
+              </span>
+            </button>
+          ) : (
+            <Link href="/" className="flex items-center gap-2.5">
+              {isInWorkspace && (
+                <div className="bg-primary p-2 rounded-lg text-primary-foreground shadow-sm">
+                  <BarChart2 className="w-5 h-5" />
+                </div>
+              )}
+              <span className="text-xl font-bold tracking-tight text-foreground hidden sm:inline">
+                {t.nav.appName}
+              </span>
+            </Link>
+          )}
 
-        {/* ── Right side controls ── */}
-        <div className="ms-auto flex items-center gap-2">
-          <LanguageSwitcher />
-
-          {/* Log In + Sign Up — landing only */}
+          {/* Auth buttons — landing only, adjacent to the logo */}
           {!isInWorkspace && (
-            <div className="flex items-center gap-2 ms-1">
+            <div className="flex items-center gap-2">
               <Link
                 href="/login"
                 className="px-3.5 py-1.5 rounded-lg text-sm font-medium text-foreground hover:bg-muted transition-colors border border-border"
@@ -110,7 +98,27 @@ export function AppHeader({
               </Link>
             </div>
           )}
+
+          {/* Workspace nav links — workspace only, adjacent to the logo */}
+          {isInWorkspace && (
+            <nav className="ms-1 flex items-center gap-0.5" aria-label="Main navigation">
+              <NavLink href="/" active={location === "/"}>
+                <LayoutDashboard className="w-3.5 h-3.5 shrink-0" />
+                <span className="hidden sm:inline">{t.nav.workspace}</span>
+              </NavLink>
+              <NavLink href="/relationships" active={location === "/relationships"}>
+                <GitBranch className="w-3.5 h-3.5 shrink-0" />
+                <span className="hidden sm:inline">{t.nav.relationships}</span>
+              </NavLink>
+            </nav>
+          )}
         </div>
+
+        {/* ── Spacer ── */}
+        <div className="flex-1" />
+
+        {/* ── Right: language switcher ── */}
+        <LanguageSwitcher />
 
       </div>
     </header>
