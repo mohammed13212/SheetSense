@@ -1,9 +1,34 @@
-import { Link } from "wouter";
-import { BarChart2, LogIn } from "lucide-react";
+import { useState } from "react";
+import { Link, useLocation } from "wouter";
+import { BarChart2 } from "lucide-react";
 import { useLocale } from "@/i18n/context";
+import { useAuth } from "@/store/AuthContext";
 
 export default function Login() {
   const { t } = useLocale();
+  const { signIn } = useAuth();
+  const [, navigate] = useLocation();
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    const { error: authError } = await signIn(email, password);
+
+    if (authError) {
+      setError(authError.message);
+      setLoading(false);
+    } else {
+      navigate("/dashboard");
+    }
+  }
+
   return (
     <div className="flex flex-col items-center justify-center min-h-[100dvh] bg-background text-foreground px-4">
       <div className="w-full max-w-sm space-y-8">
@@ -17,27 +42,81 @@ export default function Login() {
 
         {/* Card */}
         <div className="rounded-2xl border border-border bg-card p-8 shadow-sm space-y-6">
-          <div className="text-center space-y-1.5">
-            <div className="flex justify-center mb-3">
-              <div className="p-3 rounded-full bg-primary/10 text-primary">
-                <LogIn className="w-5 h-5" />
-              </div>
-            </div>
+          <div className="text-center space-y-1">
             <h1 className="text-2xl font-bold tracking-tight">{t.nav.logIn}</h1>
             <p className="text-sm text-muted-foreground">
-              Authentication coming soon.
+              Welcome back. Sign in to your account.
             </p>
           </div>
 
-          {/* Placeholder form */}
-          <div className="space-y-3">
-            <div className="h-10 rounded-lg bg-muted/50 border border-border animate-pulse" />
-            <div className="h-10 rounded-lg bg-muted/50 border border-border animate-pulse" />
-            <div className="h-10 rounded-lg bg-primary/20 border border-primary/30 animate-pulse" />
-          </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Error */}
+            {error && (
+              <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                {error}
+              </div>
+            )}
+
+            {/* Email */}
+            <div className="space-y-1.5">
+              <label
+                htmlFor="email"
+                className="text-sm font-medium text-foreground"
+              >
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm outline-none ring-offset-background transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+              />
+            </div>
+
+            {/* Password */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label
+                  htmlFor="password"
+                  className="text-sm font-medium text-foreground"
+                >
+                  Password
+                </label>
+                <Link
+                  href="/forgot-password"
+                  className="text-xs text-primary hover:underline"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+              <input
+                id="password"
+                type="password"
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm outline-none ring-offset-background transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+              />
+            </div>
+
+            {/* Submit */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full h-10 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {loading ? "Signing in…" : "Sign In"}
+            </button>
+          </form>
 
           <p className="text-center text-sm text-muted-foreground">
-            {t.nav.signUp}{" "}
+            Don't have an account?{" "}
             <Link href="/signup" className="text-primary hover:underline font-medium">
               {t.nav.signUp}
             </Link>
@@ -46,7 +125,7 @@ export default function Login() {
 
         <p className="text-center text-xs text-muted-foreground">
           <Link href="/" className="hover:text-foreground transition-colors">
-            ← {t.nav.appName}
+            ← Back to {t.nav.appName}
           </Link>
         </p>
       </div>
