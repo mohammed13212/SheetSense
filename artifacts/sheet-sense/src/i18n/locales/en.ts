@@ -7,11 +7,13 @@ const en: Translations = {
     switchLangAria: "Switch to Arabic",
     workspace: "Workspace",
     relationships: "Relationships",
+    themeLight: "Light",
+    themeDark: "Dark",
   },
   hero: {
-    heading: "Data, made legible.",
+    heading: "Analyze Excel & CSV files in seconds.",
     subheading:
-      "A quiet, focused tool for analyzing your spreadsheets locally. No clutter. No uploads to servers. Just instant insights.",
+      "Upload your spreadsheet and instantly discover data quality, insights, charts, and summaries.",
   },
   dropzone: {
     title: "Drop your spreadsheet here",

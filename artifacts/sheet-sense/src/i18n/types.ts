@@ -18,6 +18,8 @@ export type Translations = {
     switchLangAria: string;
     workspace: string;
     relationships: string;
+    themeLight: string;
+    themeDark: string;
   };
   hero: {
     heading: string;

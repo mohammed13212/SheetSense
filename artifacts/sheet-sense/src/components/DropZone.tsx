@@ -56,7 +56,7 @@ export function DropZone({ onFilesAccepted, isLoading, error }: DropZoneProps) {
         onDrop={handleDrop}
         onClick={() => !isLoading && fileInputRef.current?.click()}
         className={cn(
-          "relative group overflow-hidden rounded-2xl border-2 border-dashed transition-all duration-300 ease-out flex flex-col items-center justify-center min-h-[320px] p-8 cursor-pointer select-none",
+          "relative group overflow-hidden rounded-2xl border-2 border-dashed transition-all duration-300 ease-out flex flex-col items-center justify-center min-h-[200px] p-6 cursor-pointer select-none",
           isDragOver
             ? "border-primary bg-primary/5 scale-[1.02]"
             : "border-border/60 bg-card hover:border-primary/50 hover:bg-muted/30",

@@ -7,6 +7,7 @@ import Home from "@/pages/Home";
 import RelationshipManager from "@/pages/RelationshipManager";
 import { LocaleProvider } from "@/i18n/context";
 import { DatasetProvider } from "@/store/DatasetContext";
+import { ThemeProvider } from "@/store/ThemeContext";
 
 const queryClient = new QueryClient();
 
@@ -22,6 +23,7 @@ function Router() {
 
 function App() {
   return (
+    <ThemeProvider>
     <LocaleProvider>
       {/* DatasetProvider is mounted above the router so all routes share
           the same dataset store without prop drilling. */}
@@ -36,6 +38,7 @@ function App() {
         </QueryClientProvider>
       </DatasetProvider>
     </LocaleProvider>
+    </ThemeProvider>
   );
 }
 

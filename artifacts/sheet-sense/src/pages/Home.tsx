@@ -137,13 +137,13 @@ function HeroUpload({ onUploadSuccess }: HeroUploadProps) {
 
   return (
     <div className={cn(
-      "flex flex-col items-center justify-center px-4 py-8 animate-in fade-in duration-500 w-full max-w-2xl mx-auto",
+      "flex flex-col items-center justify-center px-4 py-6 animate-in fade-in duration-500 w-full max-w-2xl mx-auto",
     )}>
-      <div className="text-center mb-10 space-y-4">
-        <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">
+      <div className="text-center mb-6 space-y-2.5">
+        <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground">
           {t.hero.heading}
         </h2>
-        <p className="text-lg text-muted-foreground max-w-xl mx-auto">
+        <p className="text-base text-muted-foreground max-w-lg mx-auto leading-relaxed">
           {t.hero.subheading}
         </p>
       </div>
