@@ -53,6 +53,8 @@ export type Translations = {
     removeDataset: string;
     renameDataset: string;
     renameInputPlaceholder: string;
+    menuRename: string;
+    menuDelete: string;
     openSidebar: string;
     closeSidebar: string;
     activeLabel: string;

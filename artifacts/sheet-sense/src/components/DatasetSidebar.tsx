@@ -1,7 +1,7 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import {
   Plus, X, Loader2, FileSpreadsheet, AlertCircle,
-  PanelLeftClose, Pencil, GripVertical,
+  PanelLeftClose, Pencil, GripVertical, MoreVertical, Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocale } from "@/i18n/context";
@@ -295,23 +295,19 @@ function DatasetCard({
   const [editValue, setEditValue] = useState(displayName);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Sync editValue if displayName changes externally
+  // Sync editValue when displayName changes externally (e.g. from another card)
   useEffect(() => {
     if (!isEditing) setEditValue(displayName);
   }, [displayName, isEditing]);
 
-  const startEditing = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation();
-      setEditValue(displayName);
-      setIsEditing(true);
-    },
-    [displayName],
-  );
+  const startEditing = useCallback(() => {
+    setEditValue(displayName);
+    setIsEditing(true);
+    setMenuOpen(false);
+  }, [displayName]);
 
   const commitRename = useCallback(() => {
-    const trimmed = editValue.trim();
-    onRename(trimmed);
+    onRename(editValue.trim());
     setIsEditing(false);
   }, [editValue, onRename]);
 
@@ -326,8 +322,27 @@ function DatasetCard({
   };
 
   useEffect(() => {
-    if (isEditing) inputRef.current?.focus();
+    if (isEditing) {
+      const input = inputRef.current;
+      if (!input) return;
+      input.focus();
+      input.select();
+    }
   }, [isEditing]);
+
+  // ── Context menu state ────────────────────────────────────────────────────
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close menu on outside click
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (!menuRef.current?.contains(e.target as Node)) setMenuOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [menuOpen]);
 
   return (
     <div
@@ -356,10 +371,10 @@ function DatasetCard({
       aria-current={isActive ? "page" : undefined}
     >
       {/* ── File name / rename input row ── */}
-      <div className="flex items-start gap-1.5 pe-14">
-        {/* Drag handle */}
+      <div className="flex items-start gap-1.5 pe-8">
+        {/* Drag handle — stops click from selecting the dataset */}
         <div
-          className="mt-0.5 shrink-0 cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+          className="mt-0.5 shrink-0 cursor-grab active:cursor-grabbing text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors"
           onClick={(e) => e.stopPropagation()}
         >
           <GripVertical className="w-3.5 h-3.5" />
@@ -388,9 +403,15 @@ function DatasetCard({
             )}
           />
         ) : (
+          // Double-click the name to start renaming inline
           <span
-            className="flex-1 min-w-0 text-sm font-medium text-foreground leading-snug break-all line-clamp-2"
-            title={displayName}
+            className="flex-1 min-w-0 text-sm font-medium text-foreground leading-snug break-all line-clamp-2 cursor-text"
+            title={
+              dataset.displayName
+                ? `${dataset.displayName} (${file.fileName})`
+                : file.fileName
+            }
+            onDoubleClick={(e) => { e.stopPropagation(); startEditing(); }}
           >
             {displayName}
           </span>
@@ -436,27 +457,42 @@ function DatasetCard({
         </div>
       )}
 
-      {/* ── Action buttons (rename + remove) ── */}
+      {/* ── ⋮ context menu ── */}
       {!isEditing && (
-        <>
-          {/* Rename */}
+        <div
+          ref={menuRef}
+          className="absolute top-1.5 end-1.5"
+          onClick={(e) => e.stopPropagation()}
+        >
           <button
-            onClick={startEditing}
-            aria-label={t.datasets.renameDataset}
-            className="absolute top-2 end-8 p-1 rounded-md text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-muted hover:text-foreground transition-all duration-150"
+            onClick={() => setMenuOpen((v) => !v)}
+            aria-label="Dataset options"
+            aria-expanded={menuOpen}
+            className="p-1 rounded-md text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-muted hover:text-foreground transition-all duration-150"
           >
-            <Pencil className="w-3 h-3" />
+            <MoreVertical className="w-3.5 h-3.5" />
           </button>
 
-          {/* Remove */}
-          <button
-            onClick={(e) => { e.stopPropagation(); onRemove(); }}
-            aria-label={t.datasets.removeDataset}
-            className="absolute top-2 end-2 p-1 rounded-md text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-all duration-150"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </>
+          {menuOpen && (
+            <div className="absolute end-0 top-full mt-1 w-36 rounded-lg border border-border bg-card shadow-lg z-50 py-1 overflow-hidden">
+              <button
+                onClick={() => startEditing()}
+                className="w-full flex items-center gap-2.5 px-3 py-1.5 text-sm text-foreground hover:bg-muted transition-colors"
+              >
+                <Pencil className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                {t.datasets.menuRename}
+              </button>
+              <div className="my-1 border-t border-border/60" />
+              <button
+                onClick={() => { setMenuOpen(false); onRemove(); }}
+                className="w-full flex items-center gap-2.5 px-3 py-1.5 text-sm text-destructive hover:bg-destructive/10 transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                {t.datasets.menuDelete}
+              </button>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

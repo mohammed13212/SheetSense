@@ -41,6 +41,8 @@ const en: Translations = {
     removeDataset: "Remove dataset",
     renameDataset: "Rename dataset",
     renameInputPlaceholder: "Dataset name…",
+    menuRename: "Rename",
+    menuDelete: "Delete",
     openSidebar: "Open datasets panel",
     closeSidebar: "Close panel",
     activeLabel: "active",

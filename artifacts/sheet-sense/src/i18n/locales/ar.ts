@@ -40,6 +40,8 @@ const ar: Translations = {
     removeDataset: "إزالة المجموعة",
     renameDataset: "إعادة تسمية المجموعة",
     renameInputPlaceholder: "اسم المجموعة…",
+    menuRename: "إعادة التسمية",
+    menuDelete: "حذف",
     openSidebar: "فتح لوحة مجموعات البيانات",
     closeSidebar: "إغلاق اللوحة",
     activeLabel: "نشطة",
