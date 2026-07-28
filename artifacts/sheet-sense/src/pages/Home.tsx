@@ -13,7 +13,7 @@ import { parseFile, FileParseError } from "@/lib/parseFile";
 
 export default function Home() {
   const { t, dir } = useLocale();
-  const { datasets, activeDataset, addDataset } = useDatasets();
+  const { datasets, activeDataset, addDataset, clearDatasets } = useDatasets();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   // showHero: true = landing/hero view; false = workspace view.
   // Starts on the hero. Auto-switches to workspace after the first upload.
@@ -32,9 +32,9 @@ export default function Home() {
       <AppHeader
         showMenuButton={inWorkspace}
         onMenuClick={() => setSidebarOpen(true)}
-        // From the workspace, clicking the logo navigates back to the hero.
-        // From the hero itself there's nothing to go "back" to, so no callback.
-        onLogoClick={inWorkspace ? () => setShowHero(true) : undefined}
+        // From the workspace, clicking the logo clears all datasets and returns
+        // to the hero so the next upload always starts a clean project.
+        onLogoClick={inWorkspace ? () => { clearDatasets(); setShowHero(true); } : undefined}
       />
 
       {/* ── Body ── */}

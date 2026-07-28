@@ -7,6 +7,7 @@
  *   renameDataset    — sets a user-facing display name (file.fileName preserved)
  *   reorderDatasets  — moves a dataset before or after another by id
  *   setActiveId      — switches the active view
+ *   clearDatasets    — resets to an empty workspace (used on logo/home navigation)
  */
 
 import {
@@ -46,6 +47,9 @@ interface DatasetContextValue {
 
   /** Switch the active dataset view. */
   setActiveId: (id: string) => void;
+
+  /** Reset the workspace — removes all datasets and clears the active selection. */
+  clearDatasets: () => void;
 }
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -112,6 +116,11 @@ export function DatasetProvider({ children }: { children: ReactNode }) {
     setActiveIdState(id);
   }, []);
 
+  const clearDatasets = useCallback(() => {
+    setDatasets([]);
+    setActiveIdState(null);
+  }, []);
+
   const activeDataset = datasets.find((d) => d.id === activeId) ?? null;
 
   return (
@@ -125,6 +134,7 @@ export function DatasetProvider({ children }: { children: ReactNode }) {
         renameDataset,
         reorderDatasets,
         setActiveId,
+        clearDatasets,
       }}
     >
       {children}
