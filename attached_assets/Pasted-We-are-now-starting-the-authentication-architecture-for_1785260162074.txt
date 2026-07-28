@@ -1,0 +1,127 @@
+We are now starting the authentication architecture for SheetSense. This is an important milestone, so I want to build it correctly from the beginning.
+
+Goal
+
+Transform SheetSense from a local analysis tool into a real platform where every user has their own account, projects, and saved datasets.
+
+Authentication
+
+Do not build a complete authentication system from scratch.
+
+Use Supabase Auth as the authentication provider.
+
+It should support:
+
+Sign Up
+Sign In
+Sign Out
+Email verification
+Forgot Password
+Persistent login sessions
+
+Authentication must be designed so it can scale later without needing a rewrite.
+
+User Flow
+
+The application should follow this flow:
+
+Landing Page
+      ↓
+User uploads a file (no account required)
+      ↓
+User can analyze the file locally
+      ↓
+If the user wants to save the project,
+create multiple projects,
+or access the project later,
+prompt them to create a free account.
+
+I do not want to force registration before users experience the product.
+
+The product should demonstrate its value first.
+
+After Login
+
+After authentication, users should land on a Dashboard instead of the upload page.
+
+Example:
+
+Welcome back, Mohammed
+
+Recent Projects
+
+• Sales Analysis
+• Pizza Dataset
+• Customer Analytics
+
++ New Project
+
+This dashboard will become the user's home.
+
+Project Structure
+
+Each authenticated user owns projects.
+
+Each project owns datasets.
+
+Example:
+
+Mohammed
+
+└── Sales Analysis
+      ├── orders.csv
+      ├── customers.csv
+      └── products.csv
+
+Everything belongs to the authenticated user.
+
+Current Scope
+
+At this stage I only want:
+
+Connect the project to Supabase.
+Configure Supabase Auth.
+Create Sign Up page.
+Create Sign In page.
+Create Forgot Password page.
+Add authentication state management.
+Protect authenticated routes.
+Create an empty Dashboard page after login.
+
+Do not build project persistence yet.
+
+Do not migrate datasets yet.
+
+Do not redesign the rest of the application.
+
+Only prepare the authentication foundation correctly.
+
+UI
+
+Keep the current visual design.
+
+The Sign In and Sign Up pages should match the SheetSense style.
+
+Simple.
+
+Professional.
+
+Minimal.
+
+Responsive.
+
+No unnecessary decorations.
+
+One more important requirement:
+
+Design the authentication architecture so that the next phase can easily connect:
+
+Projects
+Saved datasets
+AI history
+Relationship manager
+User settings
+
+without changing the authentication system later.
+
+The goal is to build a long-term production architecture, not just make login work.
