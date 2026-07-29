@@ -3,12 +3,20 @@ import {
   Plus, X, Loader2, FileSpreadsheet, AlertCircle,
   PanelLeftClose, Pencil, GripVertical, MoreVertical, Trash2,
 } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useLocale } from "@/i18n/context";
 import { tpl } from "@/i18n/tpl";
 import { useDatasets } from "@/store/DatasetContext";
+import { useAuth } from "@/store/AuthContext";
+import { useProject } from "@/store/ProjectContext";
 import { parseFile, FileParseError } from "@/lib/parseFile";
+import { apiPost } from "@/lib/api";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import type { Dataset } from "@/types";
+import type { ActiveProject, ProjectFile } from "@/store/ProjectContext";
+import type { User } from "@supabase/supabase-js";
+import type { ParsedFile } from "@/types";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -25,6 +33,8 @@ export function DatasetSidebar({ isOpen, onClose }: DatasetSidebarProps) {
     datasets, activeId, setActiveId,
     removeDataset, addDataset, renameDataset, reorderDatasets,
   } = useDatasets();
+  const { user } = useAuth();
+  const { activeProject, setActiveProject, addFileToProject } = useProject();
 
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -32,15 +42,17 @@ export function DatasetSidebar({ isOpen, onClose }: DatasetSidebarProps) {
   const dropRef = useRef<HTMLDivElement>(null);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
 
+  // IDs that are soft-deleted (hidden, pending permanent removal on toast expire)
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
+  // Confirm dialog
+  const [confirmDataset, setConfirmDataset] = useState<Dataset | null>(null);
+
   // ── Drag-to-reorder state ──────────────────────────────────────────────────
-  // Tracks which card is being dragged, which card is the drop target, and
-  // whether the insertion point is before or after the target card.
   const [dragId, setDragId]         = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const [dropBefore, setDropBefore] = useState(true);
 
   // ── File upload ───────────────────────────────────────────────────────────
-  // Accept a plain File[] — never a live FileList (see comment in original).
   const handleFiles = useCallback(
     async (files: File[]) => {
       if (files.length === 0) return;
@@ -51,6 +63,9 @@ export function DatasetSidebar({ isOpen, onClose }: DatasetSidebarProps) {
         for (const file of files) {
           const pf = await parseFile(file);
           addDataset(pf);
+          if (user) {
+            await persistFileSidebar(pf, file, user, activeProject, setActiveProject, addFileToProject);
+          }
         }
       } catch (err) {
         if (err instanceof FileParseError) {
@@ -68,7 +83,7 @@ export function DatasetSidebar({ isOpen, onClose }: DatasetSidebarProps) {
         setIsUploading(false);
       }
     },
-    [addDataset, t],
+    [addDataset, t, user, activeProject, setActiveProject, addFileToProject],
   );
 
   const onFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -89,7 +104,6 @@ export function DatasetSidebar({ isOpen, onClose }: DatasetSidebarProps) {
 
   const onCardDragStart = useCallback((e: React.DragEvent, id: string) => {
     setDragId(id);
-    // Required for Firefox; the data is unused.
     e.dataTransfer.setData("text/plain", id);
     e.dataTransfer.effectAllowed = "move";
   }, []);
@@ -100,16 +114,13 @@ export function DatasetSidebar({ isOpen, onClose }: DatasetSidebarProps) {
       e.dataTransfer.dropEffect = "move";
       if (id === dragId) return;
       setDropTargetId(id);
-      // Determine insert position from cursor Y vs card midpoint
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
       setDropBefore(e.clientY < rect.top + rect.height / 2);
     },
     [dragId],
   );
 
-  const onCardDragLeave = useCallback(() => {
-    setDropTargetId(null);
-  }, []);
+  const onCardDragLeave = useCallback(() => { setDropTargetId(null); }, []);
 
   const onCardDrop = useCallback(
     (e: React.DragEvent, targetId: string) => {
@@ -127,6 +138,62 @@ export function DatasetSidebar({ isOpen, onClose }: DatasetSidebarProps) {
     setDragId(null);
     setDropTargetId(null);
   }, []);
+
+  // ── Delete with undo ──────────────────────────────────────────────────────
+
+  function handleDeleteRequest(dataset: Dataset) {
+    setConfirmDataset(dataset);
+  }
+
+  function handleDeleteConfirm() {
+    const dataset = confirmDataset;
+    if (!dataset) return;
+    setConfirmDataset(null);
+
+    const displayName = dataset.displayName ?? dataset.file.fileName;
+
+    // Optimistically hide
+    setHiddenIds((prev) => new Set([...prev, dataset.id]));
+
+    let undone = false;
+
+    toast(`"${displayName}" deleted.`, {
+      duration: 7000,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          undone = true;
+          setHiddenIds((prev) => {
+            const next = new Set(prev);
+            next.delete(dataset.id);
+            return next;
+          });
+        },
+      },
+      onDismiss: () => {
+        if (!undone) {
+          removeDataset(dataset.id);
+          setHiddenIds((prev) => {
+            const next = new Set(prev);
+            next.delete(dataset.id);
+            return next;
+          });
+        }
+      },
+      onAutoClose: () => {
+        if (!undone) {
+          removeDataset(dataset.id);
+          setHiddenIds((prev) => {
+            const next = new Set(prev);
+            next.delete(dataset.id);
+            return next;
+          });
+        }
+      },
+    });
+  }
+
+  const visibleDatasets = datasets.filter((d) => !hiddenIds.has(d.id));
 
   return (
     <>
@@ -161,7 +228,7 @@ export function DatasetSidebar({ isOpen, onClose }: DatasetSidebarProps) {
           </span>
           <div className="flex items-center gap-1">
             <span className="text-xs text-muted-foreground tabular-nums bg-muted rounded-full px-2 py-0.5">
-              {datasets.length}
+              {visibleDatasets.length}
             </span>
             <button
               onClick={onClose}
@@ -220,12 +287,12 @@ export function DatasetSidebar({ isOpen, onClose }: DatasetSidebarProps) {
 
         {/* ── Dataset list ── */}
         <div className="flex-1 overflow-y-auto py-2 px-2 space-y-1.5">
-          {datasets.length === 0 && (
+          {visibleDatasets.length === 0 && (
             <p className="text-xs text-muted-foreground text-center py-8 px-4">
               {t.datasets.noDatasets}
             </p>
           )}
-          {datasets.map((dataset) => (
+          {visibleDatasets.map((dataset) => (
             <DatasetCard
               key={dataset.id}
               dataset={dataset}
@@ -233,11 +300,8 @@ export function DatasetSidebar({ isOpen, onClose }: DatasetSidebarProps) {
               isDragging={dataset.id === dragId}
               isDropTarget={dataset.id === dropTargetId}
               dropBefore={dropBefore}
-              onSelect={() => {
-                setActiveId(dataset.id);
-                onClose();
-              }}
-              onRemove={() => removeDataset(dataset.id)}
+              onSelect={() => { setActiveId(dataset.id); onClose(); }}
+              onRemove={() => handleDeleteRequest(dataset)}
               onRename={(name) => renameDataset(dataset.id, name)}
               onDragStart={(e) => onCardDragStart(e, dataset.id)}
               onDragOver={(e) => onCardDragOver(e, dataset.id)}
@@ -248,8 +312,53 @@ export function DatasetSidebar({ isOpen, onClose }: DatasetSidebarProps) {
           ))}
         </div>
       </aside>
+
+      {/* Confirm delete dialog */}
+      <ConfirmDialog
+        open={confirmDataset !== null}
+        title="Delete Dataset?"
+        description="This action cannot be undone after the undo period expires."
+        confirmLabel="Delete"
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setConfirmDataset(null)}
+      />
     </>
   );
+}
+
+// ─── Persist helper (sidebar uploads) ─────────────────────────────────────────
+
+async function persistFileSidebar(
+  pf: ParsedFile,
+  file: File,
+  user: User,
+  activeProject: ActiveProject | null,
+  setActiveProject: (p: ActiveProject) => void,
+  addFileToProject: (f: ProjectFile) => void,
+) {
+  try {
+    let project = activeProject;
+    if (!project) {
+      const projectName = file.name.replace(/\.[^.]+$/, "");
+      const created = await apiPost<ActiveProject>("/api/projects", { name: projectName });
+      project = { ...created, files: [] };
+      setActiveProject(project);
+    }
+    const savedFile = await apiPost<ProjectFile>(`/api/projects/${project.id}/files`, {
+      originalName: file.name,
+      mimeType: file.type || "application/octet-stream",
+      fileSize: file.size,
+      rowCount: pf.rowCount ?? null,
+      colCount: pf.colCount ?? null,
+      headers: pf.headers ?? [],
+      sheetNames: pf.sheetNames ?? [],
+      dataQuality: pf.dataQuality ?? null,
+      isProcessed: true,
+    });
+    addFileToProject(savedFile);
+  } catch (err) {
+    console.warn("Failed to persist sidebar upload:", err);
+  }
 }
 
 // ─── Dataset card ─────────────────────────────────────────────────────────────
@@ -295,7 +404,6 @@ function DatasetCard({
   const [editValue, setEditValue] = useState(displayName);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Sync editValue when displayName changes externally (e.g. from another card)
   useEffect(() => {
     if (!isEditing) setEditValue(displayName);
   }, [displayName, isEditing]);
@@ -334,7 +442,6 @@ function DatasetCard({
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Close menu on outside click
   useEffect(() => {
     if (!menuOpen) return;
     const handler = (e: MouseEvent) => {
@@ -358,21 +465,17 @@ function DatasetCard({
           ? "border-primary bg-primary/5 shadow-sm"
           : "border-border hover:border-primary/30 hover:bg-muted/50",
         isDragging && "opacity-40",
-        // Drop-target indicator: top or bottom border highlight
         isDropTarget && dropBefore  && "border-t-2 border-t-primary",
         isDropTarget && !dropBefore && "border-b-2 border-b-primary",
       )}
       onClick={isEditing ? undefined : onSelect}
       role="button"
       tabIndex={0}
-      onKeyDown={(e) => {
-        if (!isEditing && e.key === "Enter") onSelect();
-      }}
+      onKeyDown={(e) => { if (!isEditing && e.key === "Enter") onSelect(); }}
       aria-current={isActive ? "page" : undefined}
     >
       {/* ── File name / rename input row ── */}
       <div className="flex items-start gap-1.5 pe-8">
-        {/* Drag handle — stops click from selecting the dataset */}
         <div
           className="mt-0.5 shrink-0 cursor-grab active:cursor-grabbing text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors"
           onClick={(e) => e.stopPropagation()}
@@ -403,14 +506,9 @@ function DatasetCard({
             )}
           />
         ) : (
-          // Double-click the name to start renaming inline
           <span
             className="flex-1 min-w-0 text-sm font-medium text-foreground leading-snug break-all line-clamp-2 cursor-text"
-            title={
-              dataset.displayName
-                ? `${dataset.displayName} (${file.fileName})`
-                : file.fileName
-            }
+            title={dataset.displayName ? `${dataset.displayName} (${file.fileName})` : file.fileName}
             onDoubleClick={(e) => { e.stopPropagation(); startEditing(); }}
           >
             {displayName}
@@ -430,12 +528,7 @@ function DatasetCard({
         {score !== null && (
           <>
             <span className="text-[11px] text-muted-foreground">·</span>
-            <span
-              className={cn(
-                "text-[10px] font-semibold px-1.5 py-px rounded-full border",
-                scoreStyle(score),
-              )}
-            >
+            <span className={cn("text-[10px] font-semibold px-1.5 py-px rounded-full border", scoreStyle(score))}>
               {tpl(t.datasets.qualityScore, { n: score })}
             </span>
           </>

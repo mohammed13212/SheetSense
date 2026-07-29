@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
+import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import { Route, Switch, Router as WouterRouter } from "wouter";
@@ -21,32 +22,24 @@ const queryClient = new QueryClient();
 function Router() {
   return (
     <Switch>
-      {/* Public routes */}
+      {/* Public + authenticated — Workspace */}
       <Route path="/" component={Home} />
       <Route path="/relationships" component={RelationshipManager} />
 
       {/* Guest-only: redirect authenticated users to /dashboard */}
       <Route path="/login">
-        <GuestRoute>
-          <Login />
-        </GuestRoute>
+        <GuestRoute><Login /></GuestRoute>
       </Route>
       <Route path="/signup">
-        <GuestRoute>
-          <Signup />
-        </GuestRoute>
+        <GuestRoute><Signup /></GuestRoute>
       </Route>
       <Route path="/forgot-password">
-        <GuestRoute>
-          <ForgotPassword />
-        </GuestRoute>
+        <GuestRoute><ForgotPassword /></GuestRoute>
       </Route>
 
       {/* Protected: redirect unauthenticated users to /login */}
       <Route path="/dashboard">
-        <ProtectedRoute>
-          <Dashboard />
-        </ProtectedRoute>
+        <ProtectedRoute><Dashboard /></ProtectedRoute>
       </Route>
 
       <Route component={NotFound} />
@@ -60,8 +53,6 @@ function App() {
       <LocaleProvider>
         <AuthProvider>
           <ProjectProvider>
-            {/* DatasetProvider is mounted above the router so all routes share
-                the same dataset store without prop drilling. */}
             <DatasetProvider>
               <QueryClientProvider client={queryClient}>
                 <TooltipProvider>
@@ -69,6 +60,7 @@ function App() {
                     <Router />
                   </WouterRouter>
                   <Toaster />
+                  <SonnerToaster position="bottom-right" richColors />
                 </TooltipProvider>
               </QueryClientProvider>
             </DatasetProvider>

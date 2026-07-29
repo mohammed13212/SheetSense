@@ -1,11 +1,14 @@
 import { useEffect, useState, useCallback } from "react";
-import { Link, useLocation } from "wouter";
-import { BarChart2, Plus, FolderOpen, LogOut, FileSpreadsheet, ChevronRight } from "lucide-react";
+import { useLocation } from "wouter";
+import { Plus, FolderOpen, FileSpreadsheet, ChevronRight, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { useLocale } from "@/i18n/context";
 import { useAuth } from "@/store/AuthContext";
 import { useProject, type ActiveProject } from "@/store/ProjectContext";
 import { useDatasets } from "@/store/DatasetContext";
 import { apiGet, apiDelete } from "@/lib/api";
+import { AuthNav } from "@/components/AuthNav";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 interface ProjectSummary {
   id: string;
@@ -25,7 +28,7 @@ interface ProjectSummary {
 
 export default function Dashboard() {
   const { t } = useLocale();
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const { setActiveProject, clearActiveProject } = useProject();
   const { clearDatasets } = useDatasets();
   const [, navigate] = useLocation();
@@ -33,7 +36,12 @@ export default function Dashboard() {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Confirm dialog state
+  const [confirmId, setConfirmId] = useState<string | null>(null);
+
+  // Hidden IDs = items pending soft-delete (hidden optimistically, not yet deleted from DB)
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
 
   const displayName =
     user?.user_metadata?.display_name ||
@@ -45,7 +53,6 @@ export default function Dashboard() {
     setError(null);
     try {
       const data = await apiGet<ProjectSummary[]>("/api/projects");
-      // Enrich with file counts by loading each project's files
       setProjects(data);
     } catch {
       setError("Could not load projects. Please try again.");
@@ -57,10 +64,6 @@ export default function Dashboard() {
   useEffect(() => {
     loadProjects();
   }, [loadProjects]);
-
-  async function handleSignOut() {
-    await signOut();
-  }
 
   function handleNewProject() {
     clearActiveProject();
@@ -93,17 +96,63 @@ export default function Dashboard() {
     navigate("/");
   }
 
-  async function handleDeleteProject(e: React.MouseEvent, id: string) {
+  function handleDeleteClick(e: React.MouseEvent, id: string) {
     e.stopPropagation();
-    if (!confirm("Delete this project? This cannot be undone.")) return;
-    setDeletingId(id);
+    setConfirmId(id);
+  }
+
+  function handleDeleteConfirm() {
+    const id = confirmId;
+    if (!id) return;
+    setConfirmId(null);
+
+    // Optimistically hide the project
+    setHiddenIds((prev) => new Set([...prev, id]));
+
+    const project = projects.find((p) => p.id === id);
+    const projectName = project?.name ?? "Project";
+
+    let undone = false;
+
+    toast(`"${projectName}" deleted.`, {
+      duration: 7000,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          undone = true;
+          setHiddenIds((prev) => {
+            const next = new Set(prev);
+            next.delete(id);
+            return next;
+          });
+        },
+      },
+      onDismiss: () => {
+        if (!undone) commitDelete(id);
+      },
+      onAutoClose: () => {
+        if (!undone) commitDelete(id);
+      },
+    });
+  }
+
+  async function commitDelete(id: string) {
     try {
       await apiDelete(`/api/projects/${id}`);
       setProjects((prev) => prev.filter((p) => p.id !== id));
+      setHiddenIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
     } catch {
-      alert("Could not delete project. Please try again.");
-    } finally {
-      setDeletingId(null);
+      // Restore on error
+      setHiddenIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      toast.error("Could not delete project. Please try again.");
     }
   }
 
@@ -115,32 +164,11 @@ export default function Dashboard() {
     });
   }
 
+  const visibleProjects = projects.filter((p) => !hiddenIds.has(p.id));
+
   return (
     <div className="min-h-[100dvh] bg-background text-foreground">
-      {/* Top nav */}
-      <header className="border-b border-border bg-card/60 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
-          <Link href="/" className="flex items-center gap-2.5 shrink-0">
-            <div className="bg-primary p-1.5 rounded-lg text-primary-foreground shadow-sm">
-              <BarChart2 className="w-4 h-4" />
-            </div>
-            <span className="text-base font-bold tracking-tight hidden sm:inline">{t.nav.appName}</span>
-          </Link>
-
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground hidden sm:inline truncate max-w-[180px]">
-              {user?.email}
-            </span>
-            <button
-              onClick={handleSignOut}
-              className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="hidden sm:inline">Sign out</span>
-            </button>
-          </div>
-        </div>
-      </header>
+      <AuthNav />
 
       {/* Body */}
       <main className="max-w-5xl mx-auto px-4 py-10 space-y-10">
@@ -170,7 +198,7 @@ export default function Dashboard() {
 
         {/* Projects list */}
         <section className="space-y-4">
-          <h2 className="text-base font-semibold">Your Projects</h2>
+          <h2 className="text-base font-semibold">Recent Projects</h2>
 
           {loading && (
             <div className="flex items-center justify-center py-16">
@@ -181,16 +209,13 @@ export default function Dashboard() {
           {!loading && error && (
             <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
               {error}{" "}
-              <button
-                onClick={loadProjects}
-                className="underline hover:no-underline ml-1"
-              >
+              <button onClick={loadProjects} className="underline hover:no-underline ml-1">
                 Retry
               </button>
             </div>
           )}
 
-          {!loading && !error && projects.length === 0 && (
+          {!loading && !error && visibleProjects.length === 0 && (
             <div className="rounded-xl border border-border bg-card/30 p-12 flex flex-col items-center justify-center text-center space-y-3">
               <div className="p-3 rounded-full bg-muted/50">
                 <FolderOpen className="w-6 h-6 text-muted-foreground" />
@@ -204,14 +229,13 @@ export default function Dashboard() {
             </div>
           )}
 
-          {!loading && !error && projects.length > 0 && (
+          {!loading && !error && visibleProjects.length > 0 && (
             <div className="space-y-2">
-              {projects.map((project) => (
+              {visibleProjects.map((project) => (
                 <button
                   key={project.id}
                   onClick={() => handleOpenProject(project)}
-                  disabled={deletingId === project.id}
-                  className="w-full text-start flex items-center gap-4 rounded-xl border border-border bg-card/40 hover:bg-card hover:border-primary/30 transition-colors p-4 group disabled:opacity-50"
+                  className="w-full text-start flex items-center gap-4 rounded-xl border border-border bg-card/40 hover:bg-card hover:border-primary/30 transition-colors p-4 group"
                 >
                   <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0">
                     <FolderOpen className="w-4 h-4" />
@@ -233,10 +257,11 @@ export default function Dashboard() {
 
                   <div className="flex items-center gap-2 shrink-0">
                     <button
-                      onClick={(e) => handleDeleteProject(e, project.id)}
-                      className="text-xs text-muted-foreground hover:text-destructive transition-colors px-2 py-1 rounded opacity-0 group-hover:opacity-100"
+                      onClick={(e) => handleDeleteClick(e, project.id)}
+                      aria-label="Delete project"
+                      className="text-muted-foreground hover:text-destructive transition-colors p-1.5 rounded-lg hover:bg-destructive/10 opacity-0 group-hover:opacity-100"
                     >
-                      Delete
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                     <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
                   </div>
@@ -246,6 +271,16 @@ export default function Dashboard() {
           )}
         </section>
       </main>
+
+      {/* Confirm delete dialog */}
+      <ConfirmDialog
+        open={confirmId !== null}
+        title="Delete Project?"
+        description="This action cannot be undone after the undo period expires."
+        confirmLabel="Delete"
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setConfirmId(null)}
+      />
     </div>
   );
 }

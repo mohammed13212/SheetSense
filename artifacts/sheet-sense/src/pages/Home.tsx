@@ -1,7 +1,9 @@
 import { useState, useCallback, useEffect } from "react";
-import { ArrowRight, ShieldCheck } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
+import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 import { DropZone } from "@/components/DropZone";
+import { AuthNav } from "@/components/AuthNav";
 import { AppHeader } from "@/components/AppHeader";
 import { DatasetSidebar } from "@/components/DatasetSidebar";
 import { DatasetPanel } from "@/components/DatasetPanel";
@@ -20,16 +22,17 @@ export default function Home() {
   const { t, dir } = useLocale();
   const { datasets, activeDataset, addDataset, clearDatasets } = useDatasets();
   const { activeProject, clearActiveProject } = useProject();
+  const { user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // showHero: true = landing/hero view; false = workspace view.
-  // If an active project is set (opened from Dashboard), jump straight to workspace.
+  // Authenticated users always go straight to workspace — never see the hero.
+  // Unauthenticated users see the hero until they upload a file.
   const [showHero, setShowHero] = useState(
-    () => datasets.length === 0 && !activeProject
+    () => !user && datasets.length === 0 && !activeProject,
   );
 
-  // When a project is opened from the Dashboard (datasets are cleared but
-  // activeProject is set), show the workspace upload area immediately.
+  // When navigating here from Dashboard (activeProject set, datasets cleared),
+  // ensure workspace mode is active.
   useEffect(() => {
     if (activeProject && datasets.length === 0) {
       setShowHero(false);
@@ -37,12 +40,17 @@ export default function Home() {
   }, [activeProject, datasets.length]);
 
   const hasDatasets = datasets.length > 0;
-  const inWorkspace = (hasDatasets || !!activeProject) && !showHero;
+  // Authenticated users are always "in workspace" (even with no files yet).
+  const inWorkspace = user ? true : (hasDatasets || !!activeProject) && !showHero;
 
   function handleLogoClick() {
-    clearDatasets();
-    clearActiveProject();
-    setShowHero(true);
+    // Authenticated: logo navigates to dashboard (handled by AuthNav link).
+    // Unauthenticated: logo resets to hero.
+    if (!user) {
+      clearDatasets();
+      clearActiveProject();
+      setShowHero(true);
+    }
   }
 
   return (
@@ -51,13 +59,20 @@ export default function Home() {
       className="flex flex-col h-[100dvh] bg-background text-foreground selection:bg-primary/20 selection:text-primary overflow-hidden"
     >
       {/* ── Header ── */}
-      <AppHeader
-        isInWorkspace={inWorkspace}
-        showMenuButton={inWorkspace}
-        onMenuClick={() => setSidebarOpen(true)}
-        onLogoClick={inWorkspace ? handleLogoClick : undefined}
-        projectName={inWorkspace ? activeProject?.name : undefined}
-      />
+      {user ? (
+        <AuthNav
+          showMenuButton={hasDatasets || !!activeProject}
+          onMenuClick={() => setSidebarOpen(true)}
+          projectName={activeProject?.name}
+        />
+      ) : (
+        <AppHeader
+          isInWorkspace={inWorkspace}
+          showMenuButton={inWorkspace}
+          onMenuClick={() => setSidebarOpen(true)}
+          onLogoClick={inWorkspace ? handleLogoClick : undefined}
+        />
+      )}
 
       {/* ── Body ── */}
       {inWorkspace ? (
@@ -73,15 +88,26 @@ export default function Home() {
             ) : (
               /* No dataset loaded yet — show the drop zone inside workspace */
               <div className="flex flex-col items-center justify-center h-full px-4 py-8">
-                <WorkspaceUpload />
+                {/* Back to Dashboard link for authenticated users */}
+                {user && (
+                  <div className="absolute top-20 start-4 md:start-8">
+                    <Link
+                      href="/dashboard"
+                      className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                      Dashboard
+                    </Link>
+                  </div>
+                )}
+                <WorkspaceUpload onFirstUpload={() => {}} />
               </div>
             )}
           </main>
         </div>
       ) : (
-        /* ── Hero ── */
+        /* ── Hero (unauthenticated only) ── */
         <div className="hero-glow flex flex-col flex-1 min-h-0 items-center justify-center">
-          {/* "Back to workspace" banner */}
           {hasDatasets && (
             <div className="w-full max-w-2xl mx-auto px-4 mb-4">
               <button
@@ -94,7 +120,6 @@ export default function Home() {
                     ({datasets.length})
                   </span>
                 </span>
-                <ArrowRight className="w-4 h-4 shrink-0" />
               </button>
             </div>
           )}
@@ -111,7 +136,11 @@ export default function Home() {
 
 // ─── Workspace upload (inside workspace when no dataset is selected) ───────────
 
-function WorkspaceUpload() {
+interface WorkspaceUploadProps {
+  onFirstUpload: () => void;
+}
+
+function WorkspaceUpload({ onFirstUpload }: WorkspaceUploadProps) {
   const { t } = useLocale();
   const { addDataset } = useDatasets();
   const { user } = useAuth();
@@ -128,11 +157,19 @@ function WorkspaceUpload() {
       try {
         for (const file of files) {
           const pf = await parseFile(file);
-          const id = addDataset(pf);
+          addDataset(pf);
           if (user) {
-            await persistFile(pf, file, user, activeProject, setActiveProject, addFileToProject);
+            await persistFile(
+              pf,
+              file,
+              user,
+              activeProject,
+              setActiveProject,
+              addFileToProject,
+            );
           }
         }
+        onFirstUpload();
       } catch (err) {
         if (err instanceof FileParseError) {
           const map: Record<string, string> = {
@@ -149,16 +186,16 @@ function WorkspaceUpload() {
         setIsLoading(false);
       }
     },
-    [t, addDataset, user, activeProject, setActiveProject, addFileToProject]
+    [t, addDataset, user, activeProject, setActiveProject, addFileToProject, onFirstUpload],
   );
 
   return (
     <div className="w-full max-w-2xl space-y-4">
-      <p className="text-sm text-muted-foreground text-center">
-        {activeProject
-          ? `Add a file to "${activeProject.name}"`
-          : t.dropzone.title}
-      </p>
+      {activeProject && (
+        <p className="text-sm text-muted-foreground text-center">
+          Add a file to <span className="font-medium text-foreground">"{activeProject.name}"</span>
+        </p>
+      )}
       <DropZone
         onFilesAccepted={processFiles}
         isLoading={isLoading}
@@ -168,7 +205,7 @@ function WorkspaceUpload() {
   );
 }
 
-// ─── Hero upload ──────────────────────────────────────────────────────────────
+// ─── Hero upload (unauthenticated users only) ─────────────────────────────────
 
 interface HeroUploadProps {
   onUploadSuccess: () => void;
@@ -193,7 +230,14 @@ function HeroUpload({ onUploadSuccess }: HeroUploadProps) {
           const pf = await parseFile(file);
           addDataset(pf);
           if (user) {
-            await persistFile(pf, file, user, activeProject, setActiveProject, addFileToProject);
+            await persistFile(
+              pf,
+              file,
+              user,
+              activeProject,
+              setActiveProject,
+              addFileToProject,
+            );
           }
         }
         onUploadSuccess();
@@ -213,13 +257,13 @@ function HeroUpload({ onUploadSuccess }: HeroUploadProps) {
         setIsLoading(false);
       }
     },
-    [t, addDataset, onUploadSuccess, user, activeProject, setActiveProject, addFileToProject]
+    [t, addDataset, onUploadSuccess, user, activeProject, setActiveProject, addFileToProject],
   );
 
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center px-4 py-8 animate-in fade-in duration-500 w-full max-w-2xl mx-auto"
+        "flex flex-col items-center justify-center px-4 py-8 animate-in fade-in duration-500 w-full max-w-2xl mx-auto",
       )}
     >
       <div className="text-center mb-8 space-y-3">
@@ -237,7 +281,6 @@ function HeroUpload({ onUploadSuccess }: HeroUploadProps) {
       />
 
       <div className="mt-4 flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-primary/5 border border-primary/15 text-sm">
-        <ShieldCheck className="w-4 h-4 shrink-0 text-primary" />
         <span className="font-medium text-primary/90">{t.footer.privacyTitle}</span>
         <span className="text-muted-foreground">&mdash; {t.footer.privacyDesc}</span>
       </div>
@@ -256,13 +299,11 @@ async function persistFile(
   user: User,
   activeProject: ActiveProject | null,
   setActiveProject: (p: ActiveProject) => void,
-  addFileToProject: (f: ProjectFile) => void
+  addFileToProject: (f: ProjectFile) => void,
 ) {
   try {
-    // Step 1 — ensure a project exists
     let project = activeProject;
     if (!project) {
-      // Create a new project named after the first file (without extension)
       const projectName = file.name.replace(/\.[^.]+$/, "");
       const created = await apiPost<ActiveProject>("/api/projects", {
         name: projectName,
@@ -271,7 +312,6 @@ async function persistFile(
       setActiveProject(project);
     }
 
-    // Step 2 — save the file record
     const savedFile = await apiPost<ProjectFile>(
       `/api/projects/${project.id}/files`,
       {
@@ -284,12 +324,12 @@ async function persistFile(
         sheetNames: pf.sheetNames ?? [],
         dataQuality: pf.dataQuality ?? null,
         isProcessed: true,
-      }
+      },
     );
 
     addFileToProject(savedFile);
   } catch (err) {
-    // Persistence is best-effort — don't interrupt the user's local analysis
+    // Persistence is best-effort — never interrupt local analysis
     console.warn("Failed to persist file to project:", err);
   }
 }

@@ -9,6 +9,7 @@ import {
   Link2Off,
   Sparkles,
   ChevronDown,
+  ChevronLeft,
   Plus,
   Pencil,
   Trash2,
@@ -17,11 +18,15 @@ import {
   Check,
 } from "lucide-react";
 import { Link } from "wouter";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useLocale } from "@/i18n/context";
 import { tpl } from "@/i18n/tpl";
 import { useDatasets } from "@/store/DatasetContext";
+import { useAuth } from "@/store/AuthContext";
+import { AuthNav } from "@/components/AuthNav";
 import { AppHeader } from "@/components/AppHeader";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import type { Dataset } from "@/types";
 
 // ─── Domain types ─────────────────────────────────────────────────────────────
@@ -71,6 +76,7 @@ interface EditorInit {
 export default function RelationshipManager() {
   const { t, dir } = useLocale();
   const { datasets } = useDatasets();
+  const { user } = useAuth();
 
   const hasDatasets = datasets.length > 0;
 
@@ -78,8 +84,11 @@ export default function RelationshipManager() {
   const [relationships, setRelationships] = useState<Relationship[]>([]);
   const [dismissedKeys, setDismissedKeys] = useState<Set<string>>(() => new Set());
   const [editorInit, setEditorInit] = useState<EditorInit | null>(null);
-  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
   const [selectedDiagramId, setSelectedDiagramId] = useState<string | null>(null);
+
+  // Soft-delete: hidden IDs are removed from view immediately; permanent after undo expires
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   // ── Editor helpers ────────────────────────────────────────────────────────
   const openCreate = useCallback(() => setEditorInit({}), []);
@@ -110,11 +119,50 @@ export default function RelationshipManager() {
     setEditorInit(null);
   }, []);
 
-  const deleteRelationship = useCallback((id: string) => {
-    setRelationships(prev => prev.filter(r => r.id !== id));
-    setConfirmingDeleteId(null);
+  // Opens the confirm dialog
+  const requestDeleteRelationship = useCallback((id: string) => {
+    setConfirmDeleteId(id);
+  }, []);
+
+  // Called after confirm — soft-delete + undo toast
+  const handleDeleteConfirm = useCallback(() => {
+    const id = confirmDeleteId;
+    if (!id) return;
+    setConfirmDeleteId(null);
+
+    // Optimistically hide
+    setHiddenIds(prev => new Set([...prev, id]));
     if (selectedDiagramId === id) setSelectedDiagramId(null);
-  }, [selectedDiagramId]);
+
+    let undone = false;
+
+    toast("Relationship deleted.", {
+      duration: 7000,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          undone = true;
+          setHiddenIds(prev => {
+            const next = new Set(prev);
+            next.delete(id);
+            return next;
+          });
+        },
+      },
+      onDismiss: () => {
+        if (!undone) {
+          setRelationships(prev => prev.filter(r => r.id !== id));
+          setHiddenIds(prev => { const next = new Set(prev); next.delete(id); return next; });
+        }
+      },
+      onAutoClose: () => {
+        if (!undone) {
+          setRelationships(prev => prev.filter(r => r.id !== id));
+          setHiddenIds(prev => { const next = new Set(prev); next.delete(id); return next; });
+        }
+      },
+    });
+  }, [confirmDeleteId, selectedDiagramId]);
 
   // ── Suggestion helpers ────────────────────────────────────────────────────
   const dismissKey = (dsAId: string, dsBId: string, suggestionId: string) =>
@@ -159,12 +207,14 @@ export default function RelationshipManager() {
     [],
   );
 
+  const visibleRelationships = relationships.filter(r => !hiddenIds.has(r.id));
+
   return (
     <div
       dir={dir}
       className="flex flex-col h-[100dvh] bg-background text-foreground overflow-hidden"
     >
-      <AppHeader isInWorkspace={hasDatasets} />
+      {user ? <AuthNav /> : <AppHeader isInWorkspace={hasDatasets} />}
 
       <main className="flex-1 overflow-y-auto">
         <div className="max-w-5xl mx-auto px-4 md:px-6 py-8 space-y-8">
@@ -172,6 +222,14 @@ export default function RelationshipManager() {
           {/* ── Page header ── */}
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-start gap-4">
+              {/* Back to Workspace */}
+              <Link
+                href="/"
+                className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors shrink-0 mt-1"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                <span className="hidden sm:inline">Workspace</span>
+              </Link>
               <div className="p-2.5 rounded-xl bg-primary text-primary-foreground shadow-sm shrink-0 mt-0.5">
                 <GitBranch className="w-5 h-5" />
               </div>
@@ -218,23 +276,20 @@ export default function RelationshipManager() {
             <>
               {/* ── Current Relationships ── */}
               <CurrentRelationshipsSection
-                relationships={relationships}
+                relationships={visibleRelationships}
                 datasets={datasets}
-                confirmingDeleteId={confirmingDeleteId}
                 onEdit={openEdit}
-                onDeleteClick={(id) => setConfirmingDeleteId(id === confirmingDeleteId ? null : id)}
-                onDeleteConfirm={deleteRelationship}
-                onDeleteCancel={() => setConfirmingDeleteId(null)}
+                onDeleteRequest={requestDeleteRelationship}
               />
 
               {/* ── Relationship Diagram ── */}
               <DiagramSection
-                relationships={relationships}
+                relationships={visibleRelationships}
                 datasets={datasets}
                 selectedId={selectedDiagramId}
                 onSelect={(id) => setSelectedDiagramId(prev => prev === id ? null : id)}
                 onEdit={openEdit}
-                onDelete={deleteRelationship}
+                onDelete={requestDeleteRelationship}
               />
 
               {/* ── Explore Suggestions ── */}
@@ -260,6 +315,16 @@ export default function RelationshipManager() {
           onClose={() => setEditorInit(null)}
         />
       )}
+
+      {/* ── Confirm delete dialog ── */}
+      <ConfirmDialog
+        open={confirmDeleteId !== null}
+        title="Delete Relationship?"
+        description="This action cannot be undone after the undo period expires."
+        confirmLabel="Delete"
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
     </div>
   );
 }
@@ -269,21 +334,15 @@ export default function RelationshipManager() {
 interface CurrentRelsSectionProps {
   relationships: Relationship[];
   datasets: Dataset[];
-  confirmingDeleteId: string | null;
   onEdit: (rel: Relationship) => void;
-  onDeleteClick: (id: string) => void;
-  onDeleteConfirm: (id: string) => void;
-  onDeleteCancel: () => void;
+  onDeleteRequest: (id: string) => void;
 }
 
 function CurrentRelationshipsSection({
   relationships,
   datasets,
-  confirmingDeleteId,
   onEdit,
-  onDeleteClick,
-  onDeleteConfirm,
-  onDeleteCancel,
+  onDeleteRequest,
 }: CurrentRelsSectionProps) {
   const { t } = useLocale();
 
@@ -318,18 +377,14 @@ function CurrentRelationshipsSection({
             const dsA = datasets.find(d => d.id === rel.datasetAId);
             const dsB = datasets.find(d => d.id === rel.datasetBId);
             if (!dsA || !dsB) return null;
-            const isConfirming = confirmingDeleteId === rel.id;
             return (
               <RelationshipRow
                 key={rel.id}
                 relationship={rel}
                 dsA={dsA}
                 dsB={dsB}
-                isConfirming={isConfirming}
                 onEdit={() => onEdit(rel)}
-                onDeleteClick={() => onDeleteClick(rel.id)}
-                onDeleteConfirm={() => onDeleteConfirm(rel.id)}
-                onDeleteCancel={onDeleteCancel}
+                onDeleteRequest={() => onDeleteRequest(rel.id)}
               />
             );
           })}
@@ -343,22 +398,16 @@ interface RelationshipRowProps {
   relationship: Relationship;
   dsA: Dataset;
   dsB: Dataset;
-  isConfirming: boolean;
   onEdit: () => void;
-  onDeleteClick: () => void;
-  onDeleteConfirm: () => void;
-  onDeleteCancel: () => void;
+  onDeleteRequest: () => void;
 }
 
 function RelationshipRow({
   relationship,
   dsA,
   dsB,
-  isConfirming,
   onEdit,
-  onDeleteClick,
-  onDeleteConfirm,
-  onDeleteCancel,
+  onDeleteRequest,
 }: RelationshipRowProps) {
   const { t } = useLocale();
   const { colA, colB, confidence } = relationship;
@@ -381,38 +430,16 @@ function RelationshipRow({
 
       {/* Actions */}
       <div className="shrink-0 flex items-center gap-1.5">
-        {isConfirming ? (
-          <>
-            <span className="text-xs font-medium text-red-600 me-1">
-              {t.relationships.confirmDelete}
-            </span>
-            <button
-              onClick={onDeleteConfirm}
-              className="px-2.5 py-1.5 rounded-lg bg-red-600 text-white text-xs font-semibold hover:bg-red-700 transition-colors"
-            >
-              {t.relationships.deleteRelationship}
-            </button>
-            <button
-              onClick={onDeleteCancel}
-              className="px-2.5 py-1.5 rounded-lg border border-border text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
-            >
-              {t.relationships.cancelDelete}
-            </button>
-          </>
-        ) : (
-          <>
-            <IconButton onClick={onEdit} title={t.relationships.editRelationship}>
-              <Pencil className="w-3.5 h-3.5" />
-            </IconButton>
-            <IconButton
-              onClick={onDeleteClick}
-              title={t.relationships.deleteRelationship}
-              danger
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </IconButton>
-          </>
-        )}
+        <IconButton onClick={onEdit} title={t.relationships.editRelationship}>
+          <Pencil className="w-3.5 h-3.5" />
+        </IconButton>
+        <IconButton
+          onClick={onDeleteRequest}
+          title={t.relationships.deleteRelationship}
+          danger
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </IconButton>
       </div>
     </div>
   );
