@@ -78,7 +78,7 @@ export default function Dashboard() {
       description: project.description,
       createdAt: project.createdAt,
       updatedAt: project.updatedAt,
-      files: project.files.map((f) => ({
+      files: (project.files ?? []).map((f) => ({
         id: f.id,
         projectId: project.id,
         originalName: f.originalName,
@@ -246,8 +246,8 @@ export default function Dashboard() {
                     <div className="flex items-center gap-3 mt-0.5">
                       <span className="text-xs text-muted-foreground flex items-center gap-1">
                         <FileSpreadsheet className="w-3 h-3" />
-                        {project.files.length}{" "}
-                        {project.files.length === 1 ? "file" : "files"}
+                        {(project.files ?? []).length}{" "}
+                        {(project.files ?? []).length === 1 ? "file" : "files"}
                       </span>
                       <span className="text-xs text-muted-foreground">
                         {formatDate(project.updatedAt)}
