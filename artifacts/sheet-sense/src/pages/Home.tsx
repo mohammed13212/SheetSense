@@ -8,6 +8,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { DatasetSidebar } from "@/components/DatasetSidebar";
 import { DatasetPanel } from "@/components/DatasetPanel";
 import { useLocale } from "@/i18n/context";
+import { tpl } from "@/i18n/tpl";
 import { useDatasets } from "@/store/DatasetContext";
 import { useAuth } from "@/store/AuthContext";
 import { useProject } from "@/store/ProjectContext";
@@ -95,7 +96,7 @@ export default function Home() {
                       className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
                     >
                       <ChevronLeft className="w-4 h-4" />
-                      Dashboard
+                      {t.workspace.backToDashboard}
                     </Link>
                   </div>
                 )}
@@ -190,7 +191,7 @@ function WorkspaceUpload({ onFirstUpload }: WorkspaceUploadProps) {
     <div className="w-full max-w-2xl space-y-4">
       {activeProject && (
         <p className="text-sm text-muted-foreground text-center">
-          Add a file to <span className="font-medium text-foreground">"{activeProject.name}"</span>
+          {tpl(t.workspace.addFileTo, { name: activeProject.name })}
         </p>
       )}
       <DropZone

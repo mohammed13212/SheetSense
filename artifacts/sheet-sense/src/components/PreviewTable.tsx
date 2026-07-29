@@ -51,7 +51,7 @@ export function PreviewTable({ file }: PreviewTableProps) {
                     className="px-6 py-3 font-semibold whitespace-nowrap text-foreground tracking-wide border-r border-border last:border-r-0"
                     data-testid={`th-header-${i}`}
                   >
-                    {header || `Column ${i + 1}`}
+                    {header || tpl(t.tabs.columnFallback, { n: String(i + 1) })}
                   </th>
                 ))}
               </tr>

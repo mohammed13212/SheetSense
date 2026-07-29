@@ -14,6 +14,8 @@ const ar: Translations = {
     themeDark: "داكن",
     logIn: "تسجيل الدخول",
     signUp: "إنشاء حساب",
+    mainNavAria: "التنقل الرئيسي",
+    datasetTabsAria: "تبويبات تحليل مجموعة البيانات",
   },
   auth: {
     loginSubtitle: "مرحباً بعودتك. سجّل دخولك إلى حسابك.",
@@ -26,6 +28,7 @@ const ar: Translations = {
     createAccount: "إنشاء حساب",
     createAccountSub: "ابدأ مجاناً. لا تحتاج إلى بطاقة ائتمانية.",
     fullName: "الاسم الكامل",
+    namePlaceholder: "محمد الراشد",
     passwordPlaceholder: "6 أحرف على الأقل",
     creatingAccount: "جارٍ إنشاء الحساب…",
     createAccountButton: "إنشاء الحساب",
@@ -68,6 +71,10 @@ const ar: Translations = {
     confirmDeleteTitle: "حذف المشروع؟",
     file: "ملف",
     files: "ملفات",
+  },
+  workspace: {
+    addFileTo: 'أضف ملفاً إلى "{name}"',
+    backToDashboard: "لوحة التحكم",
   },
   hero: {
     heading: "حلّل ملفات Excel و CSV في ثوانٍ.",
@@ -376,10 +383,13 @@ const ar: Translations = {
     insightsEmpty: "لا توجد مشكلات بارزة أو توصيات لهذه المجموعة.",
     viewDetails: "عرض التفاصيل",
     hideDetails: "إخفاء",
+    refreshFindings: "تحديث النتائج",
     searchPlaceholder: "البحث في الصفوف…",
+    clearSearch: "مسح البحث",
     noSearchResults: "لا توجد صفوف تطابق بحثك.",
     sortAsc: "ترتيب تصاعدي",
     sortDesc: "ترتيب تنازلي",
+    columnFallback: "عمود {n}",
   },
   summary: {
     title: "الملخص",

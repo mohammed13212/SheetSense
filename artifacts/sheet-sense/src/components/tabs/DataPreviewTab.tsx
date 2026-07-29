@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { Search, ChevronsUpDown, ArrowUp, ArrowDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocale } from "@/i18n/context";
+import { tpl } from "@/i18n/tpl";
 import type { ParsedFile } from "@/types";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -92,7 +93,7 @@ export function DataPreviewTab({ file }: DataPreviewTabProps) {
             <button
               onClick={() => setQuery("")}
               className="absolute end-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded text-muted-foreground hover:text-foreground transition-colors"
-              aria-label="Clear search"
+              aria-label={t.tabs.clearSearch}
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -143,7 +144,7 @@ export function DataPreviewTab({ file }: DataPreviewTabProps) {
                         }
                       >
                         <span className="truncate max-w-[160px]">
-                          {header || `Column ${i + 1}`}
+                          {header || tpl(t.tabs.columnFallback, { n: String(i + 1) })}
                         </span>
                         {isSorted && sort.dir === "asc" ? (
                           <ArrowUp className="w-3 h-3 shrink-0" />

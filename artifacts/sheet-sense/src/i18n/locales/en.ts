@@ -14,6 +14,8 @@ const en: Translations = {
     themeDark: "Dark",
     logIn: "Log In",
     signUp: "Sign Up",
+    mainNavAria: "Main navigation",
+    datasetTabsAria: "Dataset analysis tabs",
   },
   auth: {
     loginSubtitle: "Welcome back. Sign in to your account.",
@@ -26,6 +28,7 @@ const en: Translations = {
     createAccount: "Create account",
     createAccountSub: "Start for free. No credit card required.",
     fullName: "Full name",
+    namePlaceholder: "Jane Smith",
     passwordPlaceholder: "At least 6 characters",
     creatingAccount: "Creating account…",
     createAccountButton: "Create Account",
@@ -68,6 +71,10 @@ const en: Translations = {
     confirmDeleteTitle: "Delete Project?",
     file: "file",
     files: "files",
+  },
+  workspace: {
+    addFileTo: 'Add a file to "{name}"',
+    backToDashboard: "Dashboard",
   },
   hero: {
     heading: "Analyze Excel & CSV files in seconds.",
@@ -377,10 +384,13 @@ const en: Translations = {
     insightsEmpty: "No outstanding issues or recommendations for this dataset.",
     viewDetails: "View details",
     hideDetails: "Hide",
+    refreshFindings: "Refresh findings",
     searchPlaceholder: "Search rows…",
+    clearSearch: "Clear search",
     noSearchResults: "No rows match your search.",
     sortAsc: "Sort ascending",
     sortDesc: "Sort descending",
+    columnFallback: "Column {n}",
   },
   summary: {
     title: "Summary",

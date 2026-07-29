@@ -106,7 +106,7 @@ export function AppHeader({
 
           {/* Workspace nav — workspace mode */}
           {isInWorkspace && (
-            <nav className="ms-1 flex items-center gap-0.5" aria-label="Main navigation">
+            <nav className="ms-1 flex items-center gap-0.5" aria-label={t.nav.mainNavAria}>
               {/* Dashboard — authenticated users only */}
               {user && (
                 <NavLink href="/dashboard" active={location === "/dashboard"}>

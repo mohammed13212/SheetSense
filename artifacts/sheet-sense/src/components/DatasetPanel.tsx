@@ -91,7 +91,7 @@ export function DatasetPanel({ dataset }: DatasetPanelProps) {
         </div>
 
         {/* Tab bar */}
-        <nav className="flex gap-0" role="tablist" aria-label="Dataset analysis tabs">
+        <nav className="flex gap-0" role="tablist" aria-label={t.nav.datasetTabsAria}>
           {TABS.map((tab) => (
             <button
               key={tab.id}

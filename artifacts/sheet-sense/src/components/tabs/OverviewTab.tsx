@@ -74,7 +74,7 @@ export function OverviewTab({ file, insights, insightStatus, onRegenerate }: Ove
           <button
             onClick={onRegenerate}
             disabled={isLoading}
-            aria-label="Refresh findings"
+            aria-label={t.tabs.refreshFindings}
             className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-40"
           >
             <RefreshCw className={cn("w-3.5 h-3.5", isLoading && "animate-spin")} />

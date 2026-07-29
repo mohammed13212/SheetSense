@@ -56,7 +56,7 @@ export function AuthNav({ showMenuButton, onMenuClick, projectName }: AuthNavPro
         </Link>
 
         {/* Nav links */}
-        <nav className="ms-2 flex items-center gap-0.5" aria-label="Main navigation">
+        <nav className="ms-2 flex items-center gap-0.5" aria-label={t.nav.mainNavAria}>
           <NavLink href="/dashboard" active={location === "/dashboard"}>
             <Home className="w-3.5 h-3.5 shrink-0" />
             <span className="hidden sm:inline">{t.nav.dashboard}</span>

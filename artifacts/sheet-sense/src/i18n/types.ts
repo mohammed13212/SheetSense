@@ -25,6 +25,8 @@ export type Translations = {
     themeDark: string;
     logIn: string;
     signUp: string;
+    mainNavAria: string;
+    datasetTabsAria: string;
   };
   auth: {
     loginSubtitle: string;
@@ -37,6 +39,7 @@ export type Translations = {
     createAccount: string;
     createAccountSub: string;
     fullName: string;
+    namePlaceholder: string;
     passwordPlaceholder: string;
     creatingAccount: string;
     createAccountButton: string;
@@ -82,6 +85,11 @@ export type Translations = {
     confirmDeleteTitle: string;
     file: string;
     files: string;
+  };
+  workspace: {
+    /** {name} */
+    addFileTo: string;
+    backToDashboard: string;
   };
   hero: {
     heading: string;
@@ -336,10 +344,14 @@ export type Translations = {
     insightsEmpty: string;
     viewDetails: string;
     hideDetails: string;
+    refreshFindings: string;
     searchPlaceholder: string;
+    clearSearch: string;
     noSearchResults: string;
     sortAsc: string;
     sortDesc: string;
+    /** {n} */
+    columnFallback: string;
   };
   summary: {
     /** Card heading shown top-right */
