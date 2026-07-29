@@ -1,13 +1,13 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useLocation } from "wouter";
-import { Plus, FolderOpen, FileSpreadsheet, ChevronRight, Trash2 } from "lucide-react";
+import { Plus, FolderOpen, FileSpreadsheet, ChevronRight, Trash2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { useLocale } from "@/i18n/context";
 import { tpl } from "@/i18n/tpl";
 import { useAuth } from "@/store/AuthContext";
 import { useProject, type ActiveProject } from "@/store/ProjectContext";
 import { useDatasets } from "@/store/DatasetContext";
-import { apiGet, apiDelete } from "@/lib/api";
+import { apiGet, apiDelete, apiPatch } from "@/lib/api";
 import { AuthNav } from "@/components/AuthNav";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 
@@ -43,6 +43,11 @@ export default function Dashboard() {
 
   // Hidden IDs = items pending soft-delete (hidden optimistically, not yet deleted from DB)
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
+
+  // Inline rename state
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const renameInputRef = useRef<HTMLInputElement>(null);
 
   const displayName =
     user?.user_metadata?.display_name ||
@@ -95,6 +100,52 @@ export default function Dashboard() {
     setActiveProject(activeProject);
     clearDatasets();
     navigate("/");
+  }
+
+  function handleRenameStart(e: React.MouseEvent, project: ProjectSummary) {
+    e.stopPropagation();
+    setRenamingId(project.id);
+    setRenameValue(project.name);
+    // Focus happens via autoFocus on the input
+  }
+
+  async function handleRenameCommit(id: string) {
+    const trimmed = renameValue.trim();
+    // Restore if blank
+    if (!trimmed) {
+      setRenamingId(null);
+      return;
+    }
+    const original = projects.find((p) => p.id === id)?.name ?? "";
+    // No-op if unchanged
+    if (trimmed === original) {
+      setRenamingId(null);
+      return;
+    }
+    // Optimistic update
+    setProjects((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, name: trimmed } : p)),
+    );
+    setRenamingId(null);
+    try {
+      await apiPatch(`/api/projects/${id}`, { name: trimmed });
+    } catch {
+      // Roll back on error
+      setProjects((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, name: original } : p)),
+      );
+      toast.error(t.dashboard.renameError);
+    }
+  }
+
+  function handleRenameKeyDown(e: React.KeyboardEvent, id: string) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleRenameCommit(id);
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      setRenamingId(null);
+    }
   }
 
   function handleDeleteClick(e: React.MouseEvent, id: string) {
@@ -260,7 +311,22 @@ export default function Dashboard() {
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate">{project.name}</p>
+                    {renamingId === project.id ? (
+                      <input
+                        ref={renameInputRef}
+                        autoFocus
+                        value={renameValue}
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        onBlur={() => handleRenameCommit(project.id)}
+                        onKeyDown={(e) => handleRenameKeyDown(e, project.id)}
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label={t.dashboard.renameInputPlaceholder}
+                        placeholder={t.dashboard.renameInputPlaceholder}
+                        className="w-full text-sm font-semibold bg-background border border-primary rounded-md px-2 py-0.5 outline-none focus:ring-2 focus:ring-primary/40"
+                      />
+                    ) : (
+                      <p className="text-sm font-semibold truncate">{project.name}</p>
+                    )}
                     <div className="flex items-center gap-3 mt-0.5">
                       <span className="text-xs text-muted-foreground flex items-center gap-1">
                         <FileSpreadsheet className="w-3 h-3" />
@@ -279,6 +345,13 @@ export default function Dashboard() {
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={(e) => handleRenameStart(e, project)}
+                      aria-label={t.dashboard.renameProject}
+                      className="text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded-lg hover:bg-muted opacity-0 group-hover:opacity-100"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
                     <button
                       onClick={(e) => handleDeleteClick(e, project.id)}
                       aria-label={t.dashboard.deleteProject}

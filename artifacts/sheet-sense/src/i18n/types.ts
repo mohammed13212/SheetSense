@@ -85,6 +85,9 @@ export type Translations = {
     noProjects: string;
     noProjectsSub: string;
     deleteProject: string;
+    renameProject: string;
+    renameInputPlaceholder: string;
+    renameError: string;
     confirmDeleteTitle: string;
     file: string;
     files: string;
