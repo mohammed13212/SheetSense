@@ -13,6 +13,7 @@ import { LocaleProvider } from "@/i18n/context";
 import { DatasetProvider } from "@/store/DatasetContext";
 import { ThemeProvider } from "@/store/ThemeContext";
 import { AuthProvider } from "@/store/AuthContext";
+import { ProjectProvider } from "@/store/ProjectContext";
 import { ProtectedRoute, GuestRoute } from "@/components/auth/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -58,18 +59,20 @@ function App() {
     <ThemeProvider>
       <LocaleProvider>
         <AuthProvider>
-          {/* DatasetProvider is mounted above the router so all routes share
-              the same dataset store without prop drilling. */}
-          <DatasetProvider>
-            <QueryClientProvider client={queryClient}>
-              <TooltipProvider>
-                <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-                  <Router />
-                </WouterRouter>
-                <Toaster />
-              </TooltipProvider>
-            </QueryClientProvider>
-          </DatasetProvider>
+          <ProjectProvider>
+            {/* DatasetProvider is mounted above the router so all routes share
+                the same dataset store without prop drilling. */}
+            <DatasetProvider>
+              <QueryClientProvider client={queryClient}>
+                <TooltipProvider>
+                  <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+                    <Router />
+                  </WouterRouter>
+                  <Toaster />
+                </TooltipProvider>
+              </QueryClientProvider>
+            </DatasetProvider>
+          </ProjectProvider>
         </AuthProvider>
       </LocaleProvider>
     </ThemeProvider>
