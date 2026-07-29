@@ -54,6 +54,7 @@ export function LineChartView({ series, totalRows }: LineChartViewProps) {
       </div>
 
       {/* Chart */}
+      <div role="img" aria-label={tpl(t.viz.chartTitles.line, { col: series.colName })}>
       <ResponsiveContainer width="100%" height={320}>
         <LineChart
           data={series.linePoints}
@@ -105,6 +106,7 @@ export function LineChartView({ series, totalRows }: LineChartViewProps) {
           />
         </LineChart>
       </ResponsiveContainer>
+      </div>
     </div>
   );
 }

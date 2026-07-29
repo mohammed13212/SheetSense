@@ -53,6 +53,7 @@ export function BarChartView({ series, totalRows }: BarChartViewProps) {
       </div>
 
       {/* Chart */}
+      <div role="img" aria-label={tpl(t.viz.chartTitles.bar, { col: series.colName })}>
       <ResponsiveContainer width="100%" height={320}>
         <BarChart
           data={data}
@@ -96,6 +97,7 @@ export function BarChartView({ series, totalRows }: BarChartViewProps) {
           </Bar>
         </BarChart>
       </ResponsiveContainer>
+      </div>
     </div>
   );
 }

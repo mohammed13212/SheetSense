@@ -30,6 +30,8 @@ const en: Translations = {
     fullName: "Full name",
     namePlaceholder: "Jane Smith",
     passwordPlaceholder: "At least 6 characters",
+    showPassword: "Show password",
+    hidePassword: "Hide password",
     creatingAccount: "Creating account…",
     createAccountButton: "Create Account",
     alreadyHaveAccount: "Already have an account?",
@@ -45,6 +47,7 @@ const en: Translations = {
     backToApp: "← Back to SheetSense",
   },
   common: {
+    loading: "Loading…",
     undo: "Undo",
     delete: "Delete",
     cancel: "Cancel",
@@ -71,6 +74,7 @@ const en: Translations = {
     confirmDeleteTitle: "Delete Project?",
     file: "file",
     files: "files",
+    rows: "{n} rows",
   },
   workspace: {
     addFileTo: 'Add a file to "{name}"',

@@ -393,3 +393,34 @@ html[lang="ar"] {
     inset: -1px;
   }
 }
+
+/* ─── Custom scrollbar (WebKit) ──────────────────────────────────────────────
+   Thin, theme-aware scrollbar that replaces the default OS chrome.
+   Firefox uses scrollbar-width / scrollbar-color instead.
+   ────────────────────────────────────────────────────────────────────────── */
+:root {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border)) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.45);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}

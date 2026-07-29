@@ -17,6 +17,8 @@ import { ThemeProvider } from "@/store/ThemeContext";
 import { AuthProvider } from "@/store/AuthContext";
 import { ProjectProvider } from "@/store/ProjectContext";
 import { ProtectedRoute, GuestRoute } from "@/components/auth/ProtectedRoute";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const queryClient = new QueryClient();
 
@@ -48,6 +50,17 @@ function Router() {
   );
 }
 
+/** Renders the Sonner toaster with position adapted for viewport size */
+function SmartToaster() {
+  const isMobile = useIsMobile();
+  return (
+    <SonnerToaster
+      position={isMobile ? "top-center" : "bottom-right"}
+      richColors
+    />
+  );
+}
+
 function App() {
   return (
     <ThemeProvider>
@@ -57,11 +70,13 @@ function App() {
             <DatasetProvider>
               <QueryClientProvider client={queryClient}>
                 <TooltipProvider>
-                  <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-                    <Router />
-                  </WouterRouter>
+                  <ErrorBoundary>
+                    <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+                      <Router />
+                    </WouterRouter>
+                  </ErrorBoundary>
                   <Toaster />
-                  <SonnerToaster position="bottom-right" richColors />
+                  <SmartToaster />
                   <FloatingThemeToggle />
                 </TooltipProvider>
               </QueryClientProvider>

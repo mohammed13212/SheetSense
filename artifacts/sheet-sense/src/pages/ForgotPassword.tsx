@@ -103,6 +103,7 @@ export default function ForgotPassword() {
                 id="email"
                 type="email"
                 autoComplete="email"
+                autoFocus
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}

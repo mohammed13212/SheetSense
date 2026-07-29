@@ -1,4 +1,4 @@
-import { useState, useRef, type DragEvent, type ChangeEvent } from "react";
+import { useState, useRef, type DragEvent, type ChangeEvent, type KeyboardEvent } from "react";
 import { UploadCloud, AlertCircle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocale } from "@/i18n/context";
@@ -46,6 +46,13 @@ export function DropZone({ onFilesAccepted, isLoading, error }: DropZoneProps) {
     }
   };
 
+  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (!isLoading && (e.key === "Enter" || e.key === " ")) {
+      e.preventDefault();
+      fileInputRef.current?.click();
+    }
+  };
+
   return (
     <div className="w-full max-w-2xl mx-auto flex flex-col gap-4">
       {/* Drop Target — wrapped in a shadow lifter so the white card pops off
@@ -53,10 +60,14 @@ export function DropZone({ onFilesAccepted, isLoading, error }: DropZoneProps) {
       <div className="rounded-2xl shadow-lg dark:shadow-md">
       <div
         data-testid="drop-zone"
+        role="button"
+        tabIndex={isLoading ? -1 : 0}
+        aria-label={t.dropzone.title}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={() => !isLoading && fileInputRef.current?.click()}
+        onKeyDown={handleKeyDown}
         className={cn(
           "relative group overflow-hidden rounded-2xl border-2 border-dashed transition-all duration-300 ease-out flex flex-col items-center justify-center min-h-[200px] p-6 cursor-pointer select-none",
           isDragOver

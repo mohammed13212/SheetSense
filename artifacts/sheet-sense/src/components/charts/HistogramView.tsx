@@ -55,6 +55,7 @@ export function HistogramView({ series, totalRows }: HistogramViewProps) {
       </div>
 
       {/* Chart */}
+      <div role="img" aria-label={tpl(t.viz.chartTitles.histogram, { col: series.colName })}>
       <ResponsiveContainer width="100%" height={320}>
         <BarChart
           data={data}
@@ -105,6 +106,7 @@ export function HistogramView({ series, totalRows }: HistogramViewProps) {
           </Bar>
         </BarChart>
       </ResponsiveContainer>
+      </div>
     </div>
   );
 }

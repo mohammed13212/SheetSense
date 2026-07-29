@@ -41,6 +41,8 @@ export type Translations = {
     fullName: string;
     namePlaceholder: string;
     passwordPlaceholder: string;
+    showPassword: string;
+    hidePassword: string;
     creatingAccount: string;
     createAccountButton: string;
     alreadyHaveAccount: string;
@@ -58,6 +60,7 @@ export type Translations = {
     backToApp: string;
   };
   common: {
+    loading: string;
     undo: string;
     delete: string;
     cancel: string;
@@ -85,6 +88,8 @@ export type Translations = {
     confirmDeleteTitle: string;
     file: string;
     files: string;
+    /** {n} */
+    rows: string;
   };
   workspace: {
     /** {name} */

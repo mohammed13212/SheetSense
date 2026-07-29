@@ -80,6 +80,7 @@ export function PieChartView({ series, totalRows }: PieChartViewProps) {
       </div>
 
       {/* Chart */}
+      <div role="img" aria-label={tpl(t.viz.chartTitles.pie, { col: series.colName })}>
       <ResponsiveContainer width="100%" height={320}>
         <PieChart>
           <Pie
@@ -121,6 +122,7 @@ export function PieChartView({ series, totalRows }: PieChartViewProps) {
           />
         </PieChart>
       </ResponsiveContainer>
+      </div>
     </div>
   );
 }

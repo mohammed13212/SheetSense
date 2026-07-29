@@ -202,8 +202,20 @@ export default function Dashboard() {
           <h2 className="text-base font-semibold">{t.dashboard.recentProjects}</h2>
 
           {loading && (
-            <div className="flex items-center justify-center py-16">
-              <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <div className="space-y-2" aria-busy="true" aria-label={t.common.loading}>
+              {[0, 1, 2].map((i) => (
+                <div
+                  key={i}
+                  className="w-full flex items-center gap-4 rounded-xl border border-border bg-card/40 p-4 animate-pulse"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-muted shrink-0" />
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <div className="h-3.5 bg-muted rounded-md w-2/5" />
+                    <div className="h-2.5 bg-muted rounded-md w-1/4" />
+                  </div>
+                  <div className="w-4 h-4 bg-muted rounded shrink-0" />
+                </div>
+              ))}
             </div>
           )}
 
@@ -232,7 +244,12 @@ export default function Dashboard() {
 
           {!loading && !error && visibleProjects.length > 0 && (
             <div className="space-y-2">
-              {visibleProjects.map((project) => (
+              {visibleProjects.map((project) => {
+                const totalRows = (project.files ?? []).reduce(
+                  (sum, f) => sum + (f.rowCount ?? 0),
+                  0,
+                );
+                return (
                 <button
                   key={project.id}
                   onClick={() => handleOpenProject(project)}
@@ -250,6 +267,11 @@ export default function Dashboard() {
                         {(project.files ?? []).length}{" "}
                         {(project.files ?? []).length === 1 ? t.dashboard.file : t.dashboard.files}
                       </span>
+                      {totalRows > 0 && (
+                        <span className="text-xs text-muted-foreground">
+                          {tpl(t.dashboard.rows, { n: totalRows.toLocaleString() })}
+                        </span>
+                      )}
                       <span className="text-xs text-muted-foreground">
                         {formatDate(project.updatedAt)}
                       </span>
@@ -267,7 +289,8 @@ export default function Dashboard() {
                     <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
                   </div>
                 </button>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>

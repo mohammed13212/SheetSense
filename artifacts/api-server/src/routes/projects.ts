@@ -77,6 +77,39 @@ router.get("/projects/:projectId", requireAuth, async (req, res) => {
 });
 
 /**
+ * PATCH /api/projects/:projectId
+ * Updates the name (and optionally description) of a project. Owner only.
+ * Body: { name: string, description?: string }
+ */
+router.patch("/projects/:projectId", requireAuth, async (req, res) => {
+  const { projectId } = req.params;
+  const name = typeof req.body.name === "string" ? req.body.name.trim() : undefined;
+
+  if (!name) {
+    res.status(400).json({ error: "name is required and must be non-empty" });
+    return;
+  }
+
+  const [updated] = await db
+    .update(projectsTable)
+    .set({ name })
+    .where(
+      and(
+        eq(projectsTable.id, projectId),
+        eq(projectsTable.userId, req.userId!)
+      )
+    )
+    .returning();
+
+  if (!updated) {
+    res.status(404).json({ error: "Project not found" });
+    return;
+  }
+
+  res.json(updated);
+});
+
+/**
  * DELETE /api/projects/:projectId
  * Deletes a project (and its files via cascade). Only the owner can delete.
  */

@@ -30,6 +30,8 @@ const ar: Translations = {
     fullName: "الاسم الكامل",
     namePlaceholder: "محمد الراشد",
     passwordPlaceholder: "6 أحرف على الأقل",
+    showPassword: "إظهار كلمة المرور",
+    hidePassword: "إخفاء كلمة المرور",
     creatingAccount: "جارٍ إنشاء الحساب…",
     createAccountButton: "إنشاء الحساب",
     alreadyHaveAccount: "هل لديك حساب بالفعل؟",
@@ -45,6 +47,7 @@ const ar: Translations = {
     backToApp: "→ العودة إلى SheetSense",
   },
   common: {
+    loading: "جارٍ التحميل…",
     undo: "تراجع",
     delete: "حذف",
     cancel: "إلغاء",
@@ -71,6 +74,7 @@ const ar: Translations = {
     confirmDeleteTitle: "حذف المشروع؟",
     file: "ملف",
     files: "ملفات",
+    rows: "{n} صف",
   },
   workspace: {
     addFileTo: 'أضف ملفاً إلى "{name}"',
