@@ -157,10 +157,10 @@ export function DatasetSidebar({ isOpen, onClose }: DatasetSidebarProps) {
 
     let undone = false;
 
-    toast(`"${displayName}" deleted.`, {
+    toast(tpl(t.datasets.deleted, { name: displayName }), {
       duration: 7000,
       action: {
-        label: "Undo",
+        label: t.common.undo,
         onClick: () => {
           undone = true;
           setHiddenIds((prev) => {
@@ -316,9 +316,10 @@ export function DatasetSidebar({ isOpen, onClose }: DatasetSidebarProps) {
       {/* Confirm delete dialog */}
       <ConfirmDialog
         open={confirmDataset !== null}
-        title="Delete Dataset?"
-        description="This action cannot be undone after the undo period expires."
-        confirmLabel="Delete"
+        title={t.datasets.confirmDeleteTitle}
+        description={t.common.undoDescription}
+        confirmLabel={t.common.delete}
+        cancelLabel={t.common.cancel}
         onConfirm={handleDeleteConfirm}
         onCancel={() => setConfirmDataset(null)}
       />
@@ -559,7 +560,7 @@ function DatasetCard({
         >
           <button
             onClick={() => setMenuOpen((v) => !v)}
-            aria-label="Dataset options"
+            aria-label={t.datasets.datasetOptions}
             aria-expanded={menuOpen}
             className="p-1 rounded-md text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-muted hover:text-foreground transition-all duration-150"
           >

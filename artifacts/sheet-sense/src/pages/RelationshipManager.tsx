@@ -136,10 +136,10 @@ export default function RelationshipManager() {
 
     let undone = false;
 
-    toast("Relationship deleted.", {
+    toast(t.relationships.deleted, {
       duration: 7000,
       action: {
-        label: "Undo",
+        label: t.common.undo,
         onClick: () => {
           undone = true;
           setHiddenIds(prev => {
@@ -228,7 +228,7 @@ export default function RelationshipManager() {
                 className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors shrink-0 mt-1"
               >
                 <ChevronLeft className="w-4 h-4" />
-                <span>Workspace</span>
+                <span>{t.nav.workspace}</span>
               </Link>
               <div className="p-2.5 rounded-xl bg-primary text-primary-foreground shadow-sm shrink-0 mt-0.5">
                 <GitBranch className="w-5 h-5" />
@@ -319,9 +319,10 @@ export default function RelationshipManager() {
       {/* ── Confirm delete dialog ── */}
       <ConfirmDialog
         open={confirmDeleteId !== null}
-        title="Delete Relationship?"
-        description="This action cannot be undone after the undo period expires."
-        confirmLabel="Delete"
+        title={t.relationships.confirmDeleteTitle}
+        description={t.common.undoDescription}
+        confirmLabel={t.common.delete}
+        cancelLabel={t.common.cancel}
         onConfirm={handleDeleteConfirm}
         onCancel={() => setConfirmDeleteId(null)}
       />
@@ -586,7 +587,7 @@ function DiagramCard({
           />
           {isSelected && (
             <span className="text-[9px] font-semibold text-primary uppercase tracking-wider">
-              JOIN
+              {t.relationships.joinLabel}
             </span>
           )}
         </div>
@@ -732,7 +733,7 @@ function ExploreSuggestionsSection({
             icon={<Link2Off className="w-7 h-7 opacity-25" />}
             message={
               suggestions.length > 0
-                ? "All suggestions have been accepted or dismissed."
+                ? t.relationships.suggestions.allDismissed
                 : t.relationships.suggestions.empty
             }
           />

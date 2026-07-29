@@ -26,9 +26,9 @@ export default function NotFound() {
           </div>
 
           <div className="space-y-2">
-            <h1 className="text-2xl font-bold tracking-tight">Page not found</h1>
+            <h1 className="text-2xl font-bold tracking-tight">{t.notFound.title}</h1>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              This page doesn't exist or may have been moved.
+              {t.notFound.description}
             </p>
           </div>
 
@@ -36,7 +36,7 @@ export default function NotFound() {
             href="/"
             className="inline-flex items-center justify-center gap-2 w-full h-10 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity shadow-sm"
           >
-            Back to {t.nav.appName}
+            {t.notFound.backTo}
           </Link>
         </div>
 

@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { Plus, FolderOpen, FileSpreadsheet, ChevronRight, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useLocale } from "@/i18n/context";
+import { tpl } from "@/i18n/tpl";
 import { useAuth } from "@/store/AuthContext";
 import { useProject, type ActiveProject } from "@/store/ProjectContext";
 import { useDatasets } from "@/store/DatasetContext";
@@ -55,7 +56,7 @@ export default function Dashboard() {
       const data = await apiGet<ProjectSummary[]>("/api/projects");
       setProjects(data);
     } catch {
-      setError("Could not load projects. Please try again.");
+      setError(t.dashboard.loadError);
     } finally {
       setLoading(false);
     }
@@ -110,14 +111,14 @@ export default function Dashboard() {
     setHiddenIds((prev) => new Set([...prev, id]));
 
     const project = projects.find((p) => p.id === id);
-    const projectName = project?.name ?? "Project";
+    const projectName = project?.name ?? t.dashboard.projectFallbackName;
 
     let undone = false;
 
-    toast(`"${projectName}" deleted.`, {
+    toast(tpl(t.dashboard.projectDeleted, { name: projectName }), {
       duration: 7000,
       action: {
-        label: "Undo",
+        label: t.common.undo,
         onClick: () => {
           undone = true;
           setHiddenIds((prev) => {
@@ -152,7 +153,7 @@ export default function Dashboard() {
         next.delete(id);
         return next;
       });
-      toast.error("Could not delete project. Please try again.");
+      toast.error(t.dashboard.deleteError);
     }
   }
 
@@ -174,7 +175,7 @@ export default function Dashboard() {
       <main className="max-w-5xl mx-auto px-4 py-10 space-y-10">
         {/* Welcome */}
         <div className="space-y-1">
-          <p className="text-sm text-muted-foreground">Welcome back</p>
+          <p className="text-sm text-muted-foreground">{t.dashboard.welcomeBack}</p>
           <h1 className="text-3xl font-bold tracking-tight capitalize">
             {displayName}
           </h1>
@@ -189,16 +190,16 @@ export default function Dashboard() {
             <Plus className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-sm font-semibold">New Project</p>
+            <p className="text-sm font-semibold">{t.dashboard.newProject}</p>
             <p className="text-xs text-muted-foreground">
-              Upload a spreadsheet and start analyzing
+              {t.dashboard.newProjectSub}
             </p>
           </div>
         </button>
 
         {/* Projects list */}
         <section className="space-y-4">
-          <h2 className="text-base font-semibold">Recent Projects</h2>
+          <h2 className="text-base font-semibold">{t.dashboard.recentProjects}</h2>
 
           {loading && (
             <div className="flex items-center justify-center py-16">
@@ -210,7 +211,7 @@ export default function Dashboard() {
             <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
               {error}{" "}
               <button onClick={loadProjects} className="underline hover:no-underline ml-1">
-                Retry
+                {t.common.retry}
               </button>
             </div>
           )}
@@ -221,9 +222,9 @@ export default function Dashboard() {
                 <FolderOpen className="w-6 h-6 text-muted-foreground" />
               </div>
               <div>
-                <p className="text-sm font-medium">No projects yet</p>
+                <p className="text-sm font-medium">{t.dashboard.noProjects}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Upload a file to create your first project.
+                  {t.dashboard.noProjectsSub}
                 </p>
               </div>
             </div>
@@ -247,7 +248,7 @@ export default function Dashboard() {
                       <span className="text-xs text-muted-foreground flex items-center gap-1">
                         <FileSpreadsheet className="w-3 h-3" />
                         {(project.files ?? []).length}{" "}
-                        {(project.files ?? []).length === 1 ? "file" : "files"}
+                        {(project.files ?? []).length === 1 ? t.dashboard.file : t.dashboard.files}
                       </span>
                       <span className="text-xs text-muted-foreground">
                         {formatDate(project.updatedAt)}
@@ -258,7 +259,7 @@ export default function Dashboard() {
                   <div className="flex items-center gap-2 shrink-0">
                     <button
                       onClick={(e) => handleDeleteClick(e, project.id)}
-                      aria-label="Delete project"
+                      aria-label={t.dashboard.deleteProject}
                       className="text-muted-foreground hover:text-destructive transition-colors p-1.5 rounded-lg hover:bg-destructive/10 opacity-0 group-hover:opacity-100"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -275,9 +276,10 @@ export default function Dashboard() {
       {/* Confirm delete dialog */}
       <ConfirmDialog
         open={confirmId !== null}
-        title="Delete Project?"
-        description="This action cannot be undone after the undo period expires."
-        confirmLabel="Delete"
+        title={t.dashboard.confirmDeleteTitle}
+        description={t.common.undoDescription}
+        confirmLabel={t.common.delete}
+        cancelLabel={t.common.cancel}
         onConfirm={handleDeleteConfirm}
         onCancel={() => setConfirmId(null)}
       />

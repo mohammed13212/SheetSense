@@ -111,7 +111,7 @@ export function AppHeader({
               {user && (
                 <NavLink href="/dashboard" active={location === "/dashboard"}>
                   <Home className="w-3.5 h-3.5 shrink-0" />
-                  <span className="hidden sm:inline">Dashboard</span>
+                  <span className="hidden sm:inline">{t.nav.dashboard}</span>
                 </NavLink>
               )}
               <NavLink href="/" active={location === "/"}>
@@ -128,7 +128,7 @@ export function AppHeader({
           {/* Project name badge */}
           {isInWorkspace && projectName && (
             <div className="hidden md:flex items-center gap-1.5 ms-2 px-2.5 py-1 rounded-md bg-muted/60 border border-border">
-              <span className="text-xs text-muted-foreground">Project:</span>
+              <span className="text-xs text-muted-foreground">{t.nav.projectLabel}</span>
               <span className="text-xs font-medium text-foreground truncate max-w-[160px]">
                 {projectName}
               </span>
@@ -148,7 +148,7 @@ export function AppHeader({
             className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors ms-1"
           >
             <LogOut className="w-3.5 h-3.5" />
-            Sign out
+            {t.nav.signOut}
           </button>
         )}
 
@@ -158,7 +158,7 @@ export function AppHeader({
             href="/dashboard"
             className="px-3.5 py-1.5 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:opacity-90 transition-opacity shadow-sm"
           >
-            Dashboard
+            {t.nav.dashboard}
           </Link>
         )}
       </div>

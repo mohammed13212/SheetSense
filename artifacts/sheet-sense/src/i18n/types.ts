@@ -18,10 +18,70 @@ export type Translations = {
     switchLangAria: string;
     workspace: string;
     relationships: string;
+    dashboard: string;
+    signOut: string;
+    projectLabel: string;
     themeLight: string;
     themeDark: string;
     logIn: string;
     signUp: string;
+  };
+  auth: {
+    loginSubtitle: string;
+    email: string;
+    password: string;
+    forgotPassword: string;
+    signingIn: string;
+    signIn: string;
+    noAccount: string;
+    createAccount: string;
+    createAccountSub: string;
+    fullName: string;
+    passwordPlaceholder: string;
+    creatingAccount: string;
+    createAccountButton: string;
+    alreadyHaveAccount: string;
+    checkEmail: string;
+    /** {email} */
+    confirmationSent: string;
+    backToSignIn: string;
+    resetPassword: string;
+    resetPasswordSub: string;
+    sending: string;
+    sendResetLink: string;
+    rememberedIt: string;
+    /** {email} */
+    resetLinkSent: string;
+    backToApp: string;
+  };
+  common: {
+    undo: string;
+    delete: string;
+    cancel: string;
+    retry: string;
+    undoDescription: string;
+  };
+  notFound: {
+    title: string;
+    description: string;
+    backTo: string;
+  };
+  dashboard: {
+    welcomeBack: string;
+    newProject: string;
+    newProjectSub: string;
+    recentProjects: string;
+    loadError: string;
+    deleteError: string;
+    /** {name} */
+    projectDeleted: string;
+    projectFallbackName: string;
+    noProjects: string;
+    noProjectsSub: string;
+    deleteProject: string;
+    confirmDeleteTitle: string;
+    file: string;
+    files: string;
   };
   hero: {
     heading: string;
@@ -66,6 +126,10 @@ export type Translations = {
     selectPrompt: string;
     continueToWorkspace: string;
     backToWorkspace: string;
+    /** {name} */
+    deleted: string;
+    datasetOptions: string;
+    confirmDeleteTitle: string;
   };
   fileStats: {
     fileName: string;
@@ -164,6 +228,9 @@ export type Translations = {
     deleteRelationship: string;
     confirmDelete: string;
     cancelDelete: string;
+    deleted: string;
+    confirmDeleteTitle: string;
+    joinLabel: string;
     currentRelationships: {
       title: string;
       subtitle: string;
@@ -175,6 +242,7 @@ export type Translations = {
       subtitle: string;
       empty: string;
       noneSelected: string;
+      allDismissed: string;
       /** {n} */
       countLabel: string;
       confidence: {

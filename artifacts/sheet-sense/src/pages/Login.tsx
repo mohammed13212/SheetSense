@@ -45,7 +45,7 @@ export default function Login() {
           <div className="text-center space-y-1">
             <h1 className="text-2xl font-bold tracking-tight">{t.nav.logIn}</h1>
             <p className="text-sm text-muted-foreground">
-              Welcome back. Sign in to your account.
+              {t.auth.loginSubtitle}
             </p>
           </div>
 
@@ -63,7 +63,7 @@ export default function Login() {
                 htmlFor="email"
                 className="text-sm font-medium text-foreground"
               >
-                Email
+                {t.auth.email}
               </label>
               <input
                 id="email"
@@ -84,13 +84,13 @@ export default function Login() {
                   htmlFor="password"
                   className="text-sm font-medium text-foreground"
                 >
-                  Password
+                  {t.auth.password}
                 </label>
                 <Link
                   href="/forgot-password"
                   className="text-xs text-primary hover:underline"
                 >
-                  Forgot password?
+                  {t.auth.forgotPassword}
                 </Link>
               </div>
               <input
@@ -111,12 +111,12 @@ export default function Login() {
               disabled={loading}
               className="w-full h-10 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {loading ? "Signing in…" : "Sign In"}
+              {loading ? t.auth.signingIn : t.auth.signIn}
             </button>
           </form>
 
           <p className="text-center text-sm text-muted-foreground">
-            Don't have an account?{" "}
+            {t.auth.noAccount}{" "}
             <Link href="/signup" className="text-primary hover:underline font-medium">
               {t.nav.signUp}
             </Link>
@@ -125,7 +125,7 @@ export default function Login() {
 
         <p className="text-center text-xs text-muted-foreground">
           <Link href="/" className="hover:text-foreground transition-colors">
-            ← Back to {t.nav.appName}
+            {t.auth.backToApp}
           </Link>
         </p>
       </div>

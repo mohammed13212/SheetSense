@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { BarChart2 } from "lucide-react";
 import { useLocale } from "@/i18n/context";
+import { tpl } from "@/i18n/tpl";
 import { useAuth } from "@/store/AuthContext";
 
 export default function ForgotPassword() {
@@ -48,14 +49,15 @@ export default function ForgotPassword() {
               </div>
             </div>
             <div>
-              <h2 className="text-xl font-bold">Check your email</h2>
-              <p className="text-sm text-muted-foreground mt-1">
-                We sent a password reset link to{" "}
-                <strong>{email}</strong>.
-              </p>
+              <h2 className="text-xl font-bold">{t.auth.checkEmail}</h2>
+              <p className="text-sm text-muted-foreground mt-1"
+                dangerouslySetInnerHTML={{
+                  __html: tpl(t.auth.resetLinkSent, { email: `<strong>${email}</strong>` })
+                }}
+              />
             </div>
             <Link href="/login" className="text-sm text-primary hover:underline">
-              Back to sign in
+              {t.auth.backToSignIn}
             </Link>
           </div>
         </div>
@@ -77,9 +79,9 @@ export default function ForgotPassword() {
         {/* Card */}
         <div className="rounded-2xl border border-border bg-card p-8 shadow-sm space-y-6">
           <div className="text-center space-y-1">
-            <h1 className="text-2xl font-bold tracking-tight">Reset password</h1>
+            <h1 className="text-2xl font-bold tracking-tight">{t.auth.resetPassword}</h1>
             <p className="text-sm text-muted-foreground">
-              Enter your email and we'll send a reset link.
+              {t.auth.resetPasswordSub}
             </p>
           </div>
 
@@ -95,7 +97,7 @@ export default function ForgotPassword() {
                 htmlFor="email"
                 className="text-sm font-medium text-foreground"
               >
-                Email
+                {t.auth.email}
               </label>
               <input
                 id="email"
@@ -114,12 +116,12 @@ export default function ForgotPassword() {
               disabled={loading}
               className="w-full h-10 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {loading ? "Sending…" : "Send Reset Link"}
+              {loading ? t.auth.sending : t.auth.sendResetLink}
             </button>
           </form>
 
           <p className="text-center text-sm text-muted-foreground">
-            Remembered it?{" "}
+            {t.auth.rememberedIt}{" "}
             <Link href="/login" className="text-primary hover:underline font-medium">
               {t.nav.logIn}
             </Link>
@@ -128,7 +130,7 @@ export default function ForgotPassword() {
 
         <p className="text-center text-xs text-muted-foreground">
           <Link href="/" className="hover:text-foreground transition-colors">
-            ← Back to {t.nav.appName}
+            {t.auth.backToApp}
           </Link>
         </p>
       </div>

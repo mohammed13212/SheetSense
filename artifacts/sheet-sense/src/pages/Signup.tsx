@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { BarChart2 } from "lucide-react";
 import { useLocale } from "@/i18n/context";
+import { tpl } from "@/i18n/tpl";
 import { useAuth } from "@/store/AuthContext";
 
 export default function Signup() {
@@ -56,14 +57,15 @@ export default function Signup() {
               </div>
             </div>
             <div>
-              <h2 className="text-xl font-bold">Check your email</h2>
-              <p className="text-sm text-muted-foreground mt-1">
-                We sent a confirmation link to <strong>{email}</strong>.<br />
-                Click it to activate your account.
-              </p>
+              <h2 className="text-xl font-bold">{t.auth.checkEmail}</h2>
+              <p className="text-sm text-muted-foreground mt-1"
+                dangerouslySetInnerHTML={{
+                  __html: tpl(t.auth.confirmationSent, { email: `<strong>${email}</strong>` })
+                }}
+              />
             </div>
             <Link href="/login" className="text-sm text-primary hover:underline">
-              Back to sign in
+              {t.auth.backToSignIn}
             </Link>
           </div>
         </div>
@@ -85,9 +87,9 @@ export default function Signup() {
         {/* Card */}
         <div className="rounded-2xl border border-border bg-card p-8 shadow-sm space-y-6">
           <div className="text-center space-y-1">
-            <h1 className="text-2xl font-bold tracking-tight">Create account</h1>
+            <h1 className="text-2xl font-bold tracking-tight">{t.auth.createAccount}</h1>
             <p className="text-sm text-muted-foreground">
-              Start for free. No credit card required.
+              {t.auth.createAccountSub}
             </p>
           </div>
 
@@ -105,7 +107,7 @@ export default function Signup() {
                 htmlFor="name"
                 className="text-sm font-medium text-foreground"
               >
-                Full name
+                {t.auth.fullName}
               </label>
               <input
                 id="name"
@@ -125,7 +127,7 @@ export default function Signup() {
                 htmlFor="email"
                 className="text-sm font-medium text-foreground"
               >
-                Email
+                {t.auth.email}
               </label>
               <input
                 id="email"
@@ -145,7 +147,7 @@ export default function Signup() {
                 htmlFor="password"
                 className="text-sm font-medium text-foreground"
               >
-                Password
+                {t.auth.password}
               </label>
               <input
                 id="password"
@@ -155,7 +157,7 @@ export default function Signup() {
                 minLength={6}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="At least 6 characters"
+                placeholder={t.auth.passwordPlaceholder}
                 className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm outline-none ring-offset-background transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
               />
             </div>
@@ -166,12 +168,12 @@ export default function Signup() {
               disabled={loading}
               className="w-full h-10 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {loading ? "Creating account…" : "Create Account"}
+              {loading ? t.auth.creatingAccount : t.auth.createAccountButton}
             </button>
           </form>
 
           <p className="text-center text-sm text-muted-foreground">
-            Already have an account?{" "}
+            {t.auth.alreadyHaveAccount}{" "}
             <Link href="/login" className="text-primary hover:underline font-medium">
               {t.nav.logIn}
             </Link>
@@ -180,7 +182,7 @@ export default function Signup() {
 
         <p className="text-center text-xs text-muted-foreground">
           <Link href="/" className="hover:text-foreground transition-colors">
-            ← Back to {t.nav.appName}
+            {t.auth.backToApp}
           </Link>
         </p>
       </div>

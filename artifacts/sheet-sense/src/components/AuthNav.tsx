@@ -59,7 +59,7 @@ export function AuthNav({ showMenuButton, onMenuClick, projectName }: AuthNavPro
         <nav className="ms-2 flex items-center gap-0.5" aria-label="Main navigation">
           <NavLink href="/dashboard" active={location === "/dashboard"}>
             <Home className="w-3.5 h-3.5 shrink-0" />
-            <span className="hidden sm:inline">Dashboard</span>
+            <span className="hidden sm:inline">{t.nav.dashboard}</span>
           </NavLink>
           <NavLink href="/" active={location === "/"}>
             <LayoutDashboard className="w-3.5 h-3.5 shrink-0" />
@@ -74,7 +74,7 @@ export function AuthNav({ showMenuButton, onMenuClick, projectName }: AuthNavPro
         {/* Project name badge */}
         {projectName && (
           <div className="hidden md:flex items-center gap-1.5 ms-1 px-2.5 py-1 rounded-md bg-muted/60 border border-border">
-            <span className="text-xs text-muted-foreground">Project:</span>
+            <span className="text-xs text-muted-foreground">{t.nav.projectLabel}</span>
             <span className="text-xs font-medium text-foreground truncate max-w-[160px]">
               {projectName}
             </span>
@@ -90,7 +90,7 @@ export function AuthNav({ showMenuButton, onMenuClick, projectName }: AuthNavPro
         {/* Sign out — icon only on mobile, icon + text on sm+ */}
         <button
           onClick={handleSignOut}
-          aria-label="Sign out"
+          aria-label={t.nav.signOut}
           className="sm:hidden p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
         >
           <LogOut className="w-4 h-4" />
@@ -100,7 +100,7 @@ export function AuthNav({ showMenuButton, onMenuClick, projectName }: AuthNavPro
           className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors ms-1 px-2 py-1.5 rounded-lg hover:bg-muted"
         >
           <LogOut className="w-3.5 h-3.5" />
-          Sign out
+          {t.nav.signOut}
         </button>
       </div>
     </header>
