@@ -11,7 +11,6 @@ import { useLocale } from "@/i18n/context";
 import { useDatasets } from "@/store/DatasetContext";
 import { useAuth } from "@/store/AuthContext";
 import { useProject } from "@/store/ProjectContext";
-import { FloatingThemeToggle } from "@/components/FloatingThemeToggle";
 import { parseFile, FileParseError } from "@/lib/parseFile";
 import { apiPost } from "@/lib/api";
 import type { ParsedFile } from "@/types";
@@ -128,8 +127,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* ── Floating theme toggle ── */}
-      <FloatingThemeToggle />
     </div>
   );
 }

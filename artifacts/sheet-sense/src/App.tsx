@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
+import { FloatingThemeToggle } from "@/components/FloatingThemeToggle";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import { Route, Switch, Router as WouterRouter } from "wouter";
@@ -61,6 +62,7 @@ function App() {
                   </WouterRouter>
                   <Toaster />
                   <SonnerToaster position="bottom-right" richColors />
+                  <FloatingThemeToggle />
                 </TooltipProvider>
               </QueryClientProvider>
             </DatasetProvider>

@@ -228,7 +228,7 @@ export default function RelationshipManager() {
                 className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors shrink-0 mt-1"
               >
                 <ChevronLeft className="w-4 h-4" />
-                <span className="hidden sm:inline">Workspace</span>
+                <span>Workspace</span>
               </Link>
               <div className="p-2.5 rounded-xl bg-primary text-primary-foreground shadow-sm shrink-0 mt-0.5">
                 <GitBranch className="w-5 h-5" />

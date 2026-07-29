@@ -7,6 +7,7 @@
 
 import { Link, useLocation } from "wouter";
 import { BarChart2, LayoutDashboard, Home, GitBranch, LogOut, Menu } from "lucide-react";
+
 import { cn } from "@/lib/utils";
 import { useLocale } from "@/i18n/context";
 import { useAuth } from "@/store/AuthContext";
@@ -22,8 +23,12 @@ interface AuthNavProps {
 
 export function AuthNav({ showMenuButton, onMenuClick, projectName }: AuthNavProps) {
   const { t } = useLocale();
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const { signOut } = useAuth();
+
+  function handleSignOut() {
+    signOut().then(() => navigate("/"));
+  }
 
   return (
     <header className="h-16 shrink-0 border-b border-border bg-card sticky top-0 z-20 shadow-sm">
@@ -81,8 +86,17 @@ export function AuthNav({ showMenuButton, onMenuClick, projectName }: AuthNavPro
 
         {/* Right: language + sign out */}
         <LanguageSwitcher />
+
+        {/* Sign out — icon only on mobile, icon + text on sm+ */}
         <button
-          onClick={() => signOut()}
+          onClick={handleSignOut}
+          aria-label="Sign out"
+          className="sm:hidden p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+        >
+          <LogOut className="w-4 h-4" />
+        </button>
+        <button
+          onClick={handleSignOut}
           className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors ms-1 px-2 py-1.5 rounded-lg hover:bg-muted"
         >
           <LogOut className="w-3.5 h-3.5" />

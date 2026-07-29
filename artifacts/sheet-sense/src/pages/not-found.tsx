@@ -1,23 +1,46 @@
-import { Card, CardContent } from '@/components/ui/card';
-import { AlertCircle } from 'lucide-react';
+import { Link } from "wouter";
+import { BarChart2, FileQuestion } from "lucide-react";
+import { useLocale } from "@/i18n/context";
 
 export default function NotFound() {
+  const { t } = useLocale();
+
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gray-50">
-      <Card className="w-full max-w-md mx-4">
-        <CardContent className="pt-6">
-          <div className="flex mb-4 gap-2">
-            <AlertCircle className="h-8 w-8 text-red-500" />
-            <h1 className="text-2xl font-bold text-gray-900">
-              404 Page Not Found
-            </h1>
+    <div className="min-h-[100dvh] w-full flex flex-col items-center justify-center bg-background text-foreground px-4">
+      <div className="w-full max-w-sm space-y-8 text-center">
+
+        {/* Logo */}
+        <Link href="/" className="inline-flex items-center gap-2.5 justify-center hover:opacity-80 transition-opacity">
+          <div className="bg-primary p-2 rounded-lg text-primary-foreground shadow-sm">
+            <BarChart2 className="w-5 h-5" />
+          </div>
+          <span className="text-xl font-bold tracking-tight">{t.nav.appName}</span>
+        </Link>
+
+        {/* Card */}
+        <div className="rounded-2xl border border-border bg-card p-8 shadow-sm space-y-5">
+          <div className="flex justify-center">
+            <div className="p-4 rounded-full bg-muted/50">
+              <FileQuestion className="w-8 h-8 text-muted-foreground" />
+            </div>
           </div>
 
-          <p className="mt-4 text-sm text-gray-600">
-            Did you forget to add the page to the router?
-          </p>
-        </CardContent>
-      </Card>
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold tracking-tight">Page not found</h1>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              This page doesn't exist or may have been moved.
+            </p>
+          </div>
+
+          <Link
+            href="/"
+            className="inline-flex items-center justify-center gap-2 w-full h-10 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity shadow-sm"
+          >
+            Back to {t.nav.appName}
+          </Link>
+        </div>
+
+      </div>
     </div>
   );
 }
