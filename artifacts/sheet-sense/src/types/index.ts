@@ -62,18 +62,9 @@ export type ParsedFile = {
 };
 
 // ─── Dataset ──────────────────────────────────────────────────────────────────
-//
-// Each uploaded file becomes a Dataset. Datasets are independent of each other
-// by design. This type is intentionally minimal — it is the extension point for
-// future inter-dataset features.
-//
-// To add relationship management later:
-//   1. Define a `DatasetRelationshipRef` type in a new `src/types/relationships.ts`
-//   2. Add `relationships?: DatasetRelationshipRef[]` here
-//   3. Extend `DatasetContext` with `addRelationship` / `removeRelationship` actions
 
 export type Dataset = {
-  /** Stable unique identifier generated at upload time. */
+  /** Stable unique identifier generated at upload time (local, session-scoped). */
   id: string;
   /** Unix ms timestamp of when the file was uploaded in this session. */
   uploadedAt: number;
@@ -84,4 +75,11 @@ export type Dataset = {
    * The original file metadata is always preserved.
    */
   displayName?: string;
+  /**
+   * The UUID of the corresponding `uploaded_files` record in the database.
+   * Set when a file is persisted (authenticated upload or project re-open).
+   * Used to map in-memory datasets back to server-side file records for
+   * relationship persistence and storage operations.
+   */
+  serverFileId?: string;
 };

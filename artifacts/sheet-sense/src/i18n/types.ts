@@ -1,17 +1,8 @@
-// ─── Supported locales ────────────────────────────────────────────────────────
-// To add a new language: add its code here, create src/i18n/locales/<code>.ts,
-// and register it in src/i18n/context.tsx.
-
+/** Locale codes that use right-to-left text direction. */
+export const RTL_LOCALES: readonly string[] = ["ar"];
 export type Locale = "en" | "ar";
 
-export const RTL_LOCALES: Locale[] = ["ar"];
-
-// ─── Translation shape ────────────────────────────────────────────────────────
-// Every locale file must satisfy this interface in full.
-
-type InsightRule = { title: string; desc: string };
-
-export type Translations = {
+export interface Translations {
   nav: {
     appName: string;
     switchLang: string;
@@ -28,6 +19,7 @@ export type Translations = {
     mainNavAria: string;
     datasetTabsAria: string;
   };
+
   auth: {
     loginSubtitle: string;
     email: string;
@@ -47,7 +39,6 @@ export type Translations = {
     createAccountButton: string;
     alreadyHaveAccount: string;
     checkEmail: string;
-    /** {email} */
     confirmationSent: string;
     backToSignIn: string;
     resetPassword: string;
@@ -55,10 +46,10 @@ export type Translations = {
     sending: string;
     sendResetLink: string;
     rememberedIt: string;
-    /** {email} */
     resetLinkSent: string;
     backToApp: string;
   };
+
   common: {
     loading: string;
     undo: string;
@@ -67,11 +58,13 @@ export type Translations = {
     retry: string;
     undoDescription: string;
   };
+
   notFound: {
     title: string;
     description: string;
     backTo: string;
   };
+
   dashboard: {
     welcomeBack: string;
     newProject: string;
@@ -79,7 +72,6 @@ export type Translations = {
     recentProjects: string;
     loadError: string;
     deleteError: string;
-    /** {name} */
     projectDeleted: string;
     projectFallbackName: string;
     noProjects: string;
@@ -91,44 +83,61 @@ export type Translations = {
     confirmDeleteTitle: string;
     file: string;
     files: string;
-    /** {n} */
     rows: string;
+    /** New Project modal */
+    createProject: string;
+    projectNameLabel: string;
+    projectNamePlaceholder: string;
+    creating: string;
+    createError: string;
   };
+
   workspace: {
-    /** {name} */
     addFileTo: string;
     backToDashboard: string;
+    /** Project loading states */
+    loadingProject: string;
+    loadingProjectSub: string;
+    projectNotFound: string;
+    projectNotFoundSub: string;
+    openingError: string;
+    uploadFirstFile: string;
+    /** {n} files could not be re-loaded from storage */
+    filesUnavailable: string;
+    addDataset: string;
   };
+
   hero: {
     heading: string;
     subheading: string;
   };
+
   dropzone: {
     title: string;
     titleLoading: string;
     subtitle: string;
     subtitleLoading: string;
   };
+
   errors: {
     invalidFile: string;
     parseError: string;
     readError: string;
   };
+
   analysis: {
     complete: string;
     subtitle: string;
     uploadAnother: string;
   };
+
   datasets: {
     sidebarTitle: string;
     addDataset: string;
     uploading: string;
     noDatasets: string;
-    /** {n} */
     rows: string;
-    /** {n} */
     cols: string;
-    /** {n} */
     qualityScore: string;
     removeDataset: string;
     renameDataset: string;
@@ -142,11 +151,11 @@ export type Translations = {
     selectPrompt: string;
     continueToWorkspace: string;
     backToWorkspace: string;
-    /** {name} */
     deleted: string;
     datasetOptions: string;
     confirmDeleteTitle: string;
   };
+
   fileStats: {
     fileName: string;
     totalSheets: string;
@@ -154,6 +163,7 @@ export type Translations = {
     columns: string;
     numericCols: string;
   };
+
   quality: {
     sectionTitle: string;
     hoverHint: string;
@@ -164,6 +174,7 @@ export type Translations = {
     legendWarning: string;
     legendHealthy: string;
   };
+
   metrics: {
     totalCells: { label: string; tooltip: string };
     missingValues: { label: string; tooltip: string };
@@ -173,11 +184,13 @@ export type Translations = {
     numericColumns: { label: string; tooltip: string };
     textColumns: { label: string; tooltip: string };
   };
+
   status: {
     healthy: string;
     warning: string;
     critical: string;
   };
+
   scoreLabel: {
     excellent: string;
     good: string;
@@ -185,19 +198,19 @@ export type Translations = {
     poor: string;
     critical: string;
   };
+
   preview: {
     title: string;
-    /** Use {count} and {sheet} as placeholders. */
     showing: string;
     noData: string;
   };
+
   insights: {
     sectionTitle: string;
     subtitle: string;
     generateButton: string;
     generatingLabel: string;
     poweredByRules: string;
-    /** Count badge: use {count} placeholder. */
     insightCount: string;
     kindLabel: {
       success: string;
@@ -205,25 +218,22 @@ export type Translations = {
       info: string;
     };
     rules: {
-      // Issues — emitted only when the problem is present (actionable)
-      minorMissing: InsightRule;        // {pct}
-      significantMissing: InsightRule;  // {pct}, {count}
-      highMissing: InsightRule;         // {pct}, {count}
-      duplicatesFound: InsightRule;     // {count}
-      emptyColumnsFound: InsightRule;   // {count}
-      // Size observations
-      smallDataset: InsightRule;        // {count}
-      largeDataset: InsightRule;        // {count}
-      // Practical next-step recommendations
-      numericDataset: InsightRule;      // {count} — numeric-only dataset
-      categoricalPossible: InsightRule; // mixed numeric + text
-      textOnlyDataset: InsightRule;     // text-only dataset
-      // Readiness verdict — exactly one fires per dataset
-      readyForViz: InsightRule;
-      readyWithIssues: InsightRule;
-      needsCleaning: InsightRule;
+      minorMissing: { title: string; desc: string };
+      significantMissing: { title: string; desc: string };
+      highMissing: { title: string; desc: string };
+      duplicatesFound: { title: string; desc: string };
+      emptyColumnsFound: { title: string; desc: string };
+      smallDataset: { title: string; desc: string };
+      largeDataset: { title: string; desc: string };
+      numericDataset: { title: string; desc: string };
+      categoricalPossible: { title: string; desc: string };
+      textOnlyDataset: { title: string; desc: string };
+      readyForViz: { title: string; desc: string };
+      readyWithIssues: { title: string; desc: string };
+      needsCleaning: { title: string; desc: string };
     };
   };
+
   relationships: {
     pageTitle: string;
     pageSubtitle: string;
@@ -259,26 +269,16 @@ export type Translations = {
       empty: string;
       noneSelected: string;
       allDismissed: string;
-      /** {n} */
       countLabel: string;
-      confidence: {
-        high: string;
-        medium: string;
-        low: string;
-      };
+      confidence: { high: string; medium: string; low: string };
       accept: string;
       edit: string;
       ignore: string;
       reasons: {
-        /** {type} */
         exactSameType: string;
-        /** {typeA}, {typeB} */
         exactDiffType: string;
-        /** {type} */
         partialSameType: string;
-        /** {typeA}, {typeB} */
         partialDiffType: string;
-        /** {typeA}, {typeB} */
         similarKeys: string;
       };
     };
@@ -301,45 +301,37 @@ export type Translations = {
       emptySub: string;
       clickHint: string;
     };
+    /** Toast errors for save/delete operations */
+    savingError: string;
+    deletingError: string;
   };
+
   viz: {
     sectionTitle: string;
     subtitle: string;
     noData: string;
     selectColumn: string;
-    chartTypes: {
-      bar: string;
-      pie: string;
-      line: string;
-      histogram: string;
-    };
-    chartTitles: {
-      bar: string;        // {col}
-      pie: string;        // {col}
-      line: string;       // {col}
-      histogram: string;  // {col}
-    };
+    chartTypes: { bar: string; pie: string; line: string; histogram: string };
+    chartTitles: { bar: string; pie: string; line: string; histogram: string };
     labels: {
       count: string;
       value: string;
       frequency: string;
       row: string;
       other: string;
-      /** {n} */
       totalRows: string;
-      /** {shown}, {total} */
       uniqueValues: string;
-      /** {n} */
       sampledPoints: string;
-      /** {min}, {mean}, {max} */
       statsLine: string;
     };
   };
+
   footer: {
     text: string;
     privacyTitle: string;
     privacyDesc: string;
   };
+
   tabs: {
     overview: string;
     insights: string;
@@ -358,21 +350,15 @@ export type Translations = {
     noSearchResults: string;
     sortAsc: string;
     sortDesc: string;
-    /** {n} */
     columnFallback: string;
   };
+
   summary: {
-    /** Card heading shown top-right */
     title: string;
-    /** Section label for the health badge row */
     datasetHealth: string;
-    /** Section label above the prose paragraph */
     quickSummary: string;
-    /** Section label above the five metric tiles */
     keyMetrics: string;
-    /** Section label above the action list */
     recommendedActions: string;
-    /** Short labels for the five metric tiles */
     metrics: {
       rows: string;
       columns: string;
@@ -380,50 +366,27 @@ export type Translations = {
       duplicateRows: string;
       qualityScore: string;
     };
-    /**
-     * Prose sentence templates.
-     * Placeholders: {rows} {cols} {pct} {count} {score} {numeric} {text}
-     */
     prose: {
-      /** {rows}, {cols} */
       size: string;
-      /** no placeholders */
       qualityExcellentClean: string;
-      /** {pct} */
       qualityExcellentMissing: string;
-      /** {count} */
       qualityExcellentDupes: string;
-      /** {pct}, {count} */
       qualityExcellentBoth: string;
-      /** {score} */
       qualityGood: string;
-      /** {score} */
       qualityFair: string;
-      /** {score} */
       qualityPoor: string;
-      /** {numeric}, {text} */
       compositionMixed: string;
-      /** {numeric} */
       compositionNumericOnly: string;
-      /** {text} */
       compositionTextOnly: string;
-      /** no placeholders */
       closingReady: string;
-      /** no placeholders */
       closingGood: string;
-      /** no placeholders */
       closingPoor: string;
     };
-    /** Action sentence templates */
     actions: {
-      /** {count} */
       duplicates: string;
-      /** {count}, {pct} */
       missing: string;
-      /** {count} */
       emptyColumns: string;
-      /** no placeholders */
       noAction: string;
     };
   };
-};
+}

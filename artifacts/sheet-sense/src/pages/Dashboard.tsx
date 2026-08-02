@@ -1,15 +1,32 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useLocation } from "wouter";
-import { Plus, FolderOpen, FileSpreadsheet, ChevronRight, Trash2, Pencil } from "lucide-react";
+import {
+  Plus,
+  FolderOpen,
+  FileSpreadsheet,
+  ChevronRight,
+  Trash2,
+  Pencil,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useLocale } from "@/i18n/context";
 import { tpl } from "@/i18n/tpl";
 import { useAuth } from "@/store/AuthContext";
-import { useProject, type ActiveProject } from "@/store/ProjectContext";
+import { useProject } from "@/store/ProjectContext";
 import { useDatasets } from "@/store/DatasetContext";
 import { apiGet, apiDelete, apiPatch } from "@/lib/api";
 import { AuthNav } from "@/components/AuthNav";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { NewProjectModal } from "@/components/NewProjectModal";
+
+interface ProjectFile {
+  id: string;
+  originalName: string;
+  rowCount: number | null;
+  colCount: number | null;
+  createdAt: string;
+  storageKey: string | null;
+}
 
 interface ProjectSummary {
   id: string;
@@ -18,19 +35,14 @@ interface ProjectSummary {
   description: string | null;
   createdAt: string;
   updatedAt: string;
-  files: {
-    id: string;
-    originalName: string;
-    rowCount: number | null;
-    colCount: number | null;
-    createdAt: string;
-  }[];
+  lastOpenedAt: string | null;
+  files: ProjectFile[];
 }
 
 export default function Dashboard() {
   const { t } = useLocale();
   const { user } = useAuth();
-  const { setActiveProject, clearActiveProject } = useProject();
+  const { clearActiveProject } = useProject();
   const { clearDatasets } = useDatasets();
   const [, navigate] = useLocation();
 
@@ -38,13 +50,16 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Confirm dialog state
+  // Modal
+  const [newProjectOpen, setNewProjectOpen] = useState(false);
+
+  // Confirm delete dialog
   const [confirmId, setConfirmId] = useState<string | null>(null);
 
-  // Hidden IDs = items pending soft-delete (hidden optimistically, not yet deleted from DB)
+  // Hidden IDs = soft-deleted, pending toast undo expiry
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
 
-  // Inline rename state
+  // Inline rename
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const renameInputRef = useRef<HTMLInputElement>(null);
@@ -65,64 +80,38 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t.dashboard.loadError]);
 
   useEffect(() => {
-    loadProjects();
-  }, [loadProjects]);
-
-  function handleNewProject() {
+    // Clear any active project when returning to the dashboard
     clearActiveProject();
     clearDatasets();
-    navigate("/");
-  }
+    loadProjects();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function handleOpenProject(project: ProjectSummary) {
-    const activeProject: ActiveProject = {
-      id: project.id,
-      name: project.name,
-      description: project.description,
-      createdAt: project.createdAt,
-      updatedAt: project.updatedAt,
-      files: (project.files ?? []).map((f) => ({
-        id: f.id,
-        projectId: project.id,
-        originalName: f.originalName,
-        mimeType: "",
-        fileSize: 0,
-        rowCount: f.rowCount,
-        colCount: f.colCount,
-        headers: [],
-        sheetNames: [],
-        createdAt: f.createdAt,
-      })),
-    };
-    setActiveProject(activeProject);
-    clearDatasets();
-    navigate("/");
+    navigate(`/projects/${project.id}`);
   }
 
   function handleRenameStart(e: React.MouseEvent, project: ProjectSummary) {
     e.stopPropagation();
     setRenamingId(project.id);
     setRenameValue(project.name);
-    // Focus happens via autoFocus on the input
+    setTimeout(() => renameInputRef.current?.focus(), 30);
   }
 
   async function handleRenameCommit(id: string) {
     const trimmed = renameValue.trim();
-    // Restore if blank
     if (!trimmed) {
       setRenamingId(null);
       return;
     }
     const original = projects.find((p) => p.id === id)?.name ?? "";
-    // No-op if unchanged
     if (trimmed === original) {
       setRenamingId(null);
       return;
     }
-    // Optimistic update
     setProjects((prev) =>
       prev.map((p) => (p.id === id ? { ...p, name: trimmed } : p)),
     );
@@ -130,7 +119,6 @@ export default function Dashboard() {
     try {
       await apiPatch(`/api/projects/${id}`, { name: trimmed });
     } catch {
-      // Roll back on error
       setProjects((prev) =>
         prev.map((p) => (p.id === id ? { ...p, name: original } : p)),
       );
@@ -138,35 +126,24 @@ export default function Dashboard() {
     }
   }
 
-  function handleRenameKeyDown(e: React.KeyboardEvent, id: string) {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      handleRenameCommit(id);
-    } else if (e.key === "Escape") {
-      e.preventDefault();
-      setRenamingId(null);
-    }
-  }
-
-  function handleDeleteClick(e: React.MouseEvent, id: string) {
+  function handleDeleteRequest(e: React.MouseEvent, id: string) {
     e.stopPropagation();
     setConfirmId(id);
   }
 
-  function handleDeleteConfirm() {
+  async function handleDeleteConfirm() {
     const id = confirmId;
     if (!id) return;
     setConfirmId(null);
 
-    // Optimistically hide the project
-    setHiddenIds((prev) => new Set([...prev, id]));
-
     const project = projects.find((p) => p.id === id);
-    const projectName = project?.name ?? t.dashboard.projectFallbackName;
+    const name = project?.name ?? t.dashboard.projectFallbackName;
+
+    setHiddenIds((prev) => new Set([...prev, id]));
 
     let undone = false;
 
-    toast(tpl(t.dashboard.projectDeleted, { name: projectName }), {
+    toast(tpl(t.dashboard.projectDeleted, { name }), {
       duration: 7000,
       action: {
         label: t.common.undo,
@@ -180,39 +157,29 @@ export default function Dashboard() {
         },
       },
       onDismiss: () => {
-        if (!undone) commitDelete(id);
+        if (!undone) {
+          apiDelete(`/api/projects/${id}`).catch(() => {
+            toast.error(t.dashboard.deleteError);
+            setHiddenIds((prev) => {
+              const next = new Set(prev);
+              next.delete(id);
+              return next;
+            });
+          });
+        }
       },
       onAutoClose: () => {
-        if (!undone) commitDelete(id);
+        if (!undone) {
+          apiDelete(`/api/projects/${id}`).catch(() => {
+            toast.error(t.dashboard.deleteError);
+            setHiddenIds((prev) => {
+              const next = new Set(prev);
+              next.delete(id);
+              return next;
+            });
+          });
+        }
       },
-    });
-  }
-
-  async function commitDelete(id: string) {
-    try {
-      await apiDelete(`/api/projects/${id}`);
-      setProjects((prev) => prev.filter((p) => p.id !== id));
-      setHiddenIds((prev) => {
-        const next = new Set(prev);
-        next.delete(id);
-        return next;
-      });
-    } catch {
-      // Restore on error
-      setHiddenIds((prev) => {
-        const next = new Set(prev);
-        next.delete(id);
-        return next;
-      });
-      toast.error(t.dashboard.deleteError);
-    }
-  }
-
-  function formatDate(iso: string) {
-    return new Date(iso).toLocaleDateString(undefined, {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
     });
   }
 
@@ -222,11 +189,12 @@ export default function Dashboard() {
     <div className="min-h-[100dvh] bg-background text-foreground">
       <AuthNav />
 
-      {/* Body */}
       <main className="max-w-5xl mx-auto px-4 py-10 space-y-10">
         {/* Welcome */}
         <div className="space-y-1">
-          <p className="text-sm text-muted-foreground">{t.dashboard.welcomeBack}</p>
+          <p className="text-sm text-muted-foreground">
+            {t.dashboard.welcomeBack}
+          </p>
           <h1 className="text-3xl font-bold tracking-tight capitalize">
             {displayName}
           </h1>
@@ -234,7 +202,7 @@ export default function Dashboard() {
 
         {/* New Project CTA */}
         <button
-          onClick={handleNewProject}
+          onClick={() => setNewProjectOpen(true)}
           className="flex items-center gap-3 w-full rounded-xl border border-dashed border-border bg-card/40 hover:bg-card hover:border-primary/40 transition-colors p-5 group text-start"
         >
           <div className="p-2.5 rounded-lg bg-primary/10 text-primary group-hover:bg-primary/15 transition-colors shrink-0">
@@ -250,10 +218,16 @@ export default function Dashboard() {
 
         {/* Projects list */}
         <section className="space-y-4">
-          <h2 className="text-base font-semibold">{t.dashboard.recentProjects}</h2>
+          <h2 className="text-base font-semibold">
+            {t.dashboard.recentProjects}
+          </h2>
 
           {loading && (
-            <div className="space-y-2" aria-busy="true" aria-label={t.common.loading}>
+            <div
+              className="space-y-2"
+              aria-busy="true"
+              aria-label={t.common.loading}
+            >
               {[0, 1, 2].map((i) => (
                 <div
                   key={i}
@@ -262,116 +236,55 @@ export default function Dashboard() {
                   <div className="w-8 h-8 rounded-lg bg-muted shrink-0" />
                   <div className="flex-1 min-w-0 space-y-2">
                     <div className="h-3.5 bg-muted rounded-md w-2/5" />
-                    <div className="h-2.5 bg-muted rounded-md w-1/4" />
+                    <div className="h-2.5 bg-muted/60 rounded-md w-3/5" />
                   </div>
-                  <div className="w-4 h-4 bg-muted rounded shrink-0" />
+                  <div className="w-6 h-6 rounded bg-muted/60 shrink-0" />
                 </div>
               ))}
             </div>
           )}
 
-          {!loading && error && (
-            <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-              {error}{" "}
-              <button onClick={loadProjects} className="underline hover:no-underline ml-1">
-                {t.common.retry}
-              </button>
+          {error && (
+            <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-5 text-center text-sm text-destructive">
+              {error}
             </div>
           )}
 
           {!loading && !error && visibleProjects.length === 0 && (
-            <div className="rounded-xl border border-border bg-card/30 p-12 flex flex-col items-center justify-center text-center space-y-3">
-              <div className="p-3 rounded-full bg-muted/50">
-                <FolderOpen className="w-6 h-6 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">{t.dashboard.noProjects}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {t.dashboard.noProjectsSub}
-                </p>
-              </div>
+            <div className="rounded-xl border border-dashed border-border bg-card/40 p-10 text-center space-y-2">
+              <FolderOpen className="w-8 h-8 mx-auto text-muted-foreground/50" />
+              <p className="text-sm font-medium text-foreground">
+                {t.dashboard.noProjects}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {t.dashboard.noProjectsSub}
+              </p>
             </div>
           )}
 
-          {!loading && !error && visibleProjects.length > 0 && (
-            <div className="space-y-2">
-              {visibleProjects.map((project) => {
-                const totalRows = (project.files ?? []).reduce(
-                  (sum, f) => sum + (f.rowCount ?? 0),
-                  0,
-                );
-                return (
-                <button
-                  key={project.id}
-                  onClick={() => handleOpenProject(project)}
-                  className="w-full text-start flex items-center gap-4 rounded-xl border border-border bg-card/40 hover:bg-card hover:border-primary/30 transition-colors p-4 group"
-                >
-                  <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0">
-                    <FolderOpen className="w-4 h-4" />
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    {renamingId === project.id ? (
-                      <input
-                        ref={renameInputRef}
-                        autoFocus
-                        value={renameValue}
-                        onChange={(e) => setRenameValue(e.target.value)}
-                        onBlur={() => handleRenameCommit(project.id)}
-                        onKeyDown={(e) => handleRenameKeyDown(e, project.id)}
-                        onClick={(e) => e.stopPropagation()}
-                        aria-label={t.dashboard.renameInputPlaceholder}
-                        placeholder={t.dashboard.renameInputPlaceholder}
-                        className="w-full text-sm font-semibold bg-background border border-primary rounded-md px-2 py-0.5 outline-none focus:ring-2 focus:ring-primary/40"
-                      />
-                    ) : (
-                      <p className="text-sm font-semibold truncate">{project.name}</p>
-                    )}
-                    <div className="flex items-center gap-3 mt-0.5">
-                      <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <FileSpreadsheet className="w-3 h-3" />
-                        {(project.files ?? []).length}{" "}
-                        {(project.files ?? []).length === 1 ? t.dashboard.file : t.dashboard.files}
-                      </span>
-                      {totalRows > 0 && (
-                        <span className="text-xs text-muted-foreground">
-                          {tpl(t.dashboard.rows, { n: totalRows.toLocaleString() })}
-                        </span>
-                      )}
-                      <span className="text-xs text-muted-foreground">
-                        {formatDate(project.updatedAt)}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      onClick={(e) => handleRenameStart(e, project)}
-                      aria-label={t.dashboard.renameProject}
-                      className="text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded-lg hover:bg-muted opacity-0 group-hover:opacity-100"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={(e) => handleDeleteClick(e, project.id)}
-                      aria-label={t.dashboard.deleteProject}
-                      className="text-muted-foreground hover:text-destructive transition-colors p-1.5 rounded-lg hover:bg-destructive/10 opacity-0 group-hover:opacity-100"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-                  </div>
-                </button>
-                );
-              })}
-            </div>
-          )}
+          {!loading &&
+            !error &&
+            visibleProjects.map((project) => (
+              <ProjectCard
+                key={project.id}
+                project={project}
+                isRenaming={renamingId === project.id}
+                renameValue={renameValue}
+                renameInputRef={renameInputRef}
+                onOpen={() => handleOpenProject(project)}
+                onRenameStart={(e) => handleRenameStart(e, project)}
+                onRenameChange={setRenameValue}
+                onRenameCommit={() => handleRenameCommit(project.id)}
+                onRenameCancel={() => setRenamingId(null)}
+                onDeleteRequest={(e) => handleDeleteRequest(e, project.id)}
+              />
+            ))}
         </section>
       </main>
 
       {/* Confirm delete dialog */}
       <ConfirmDialog
-        open={confirmId !== null}
+        open={!!confirmId}
         title={t.dashboard.confirmDeleteTitle}
         description={t.common.undoDescription}
         confirmLabel={t.common.delete}
@@ -379,6 +292,134 @@ export default function Dashboard() {
         onConfirm={handleDeleteConfirm}
         onCancel={() => setConfirmId(null)}
       />
+
+      {/* New project modal */}
+      <NewProjectModal
+        open={newProjectOpen}
+        onClose={() => setNewProjectOpen(false)}
+      />
+    </div>
+  );
+}
+
+// ─── Project card ─────────────────────────────────────────────────────────────
+
+interface ProjectCardProps {
+  project: ProjectSummary;
+  isRenaming: boolean;
+  renameValue: string;
+  renameInputRef: React.RefObject<HTMLInputElement | null>;
+  onOpen: () => void;
+  onRenameStart: (e: React.MouseEvent) => void;
+  onRenameChange: (v: string) => void;
+  onRenameCommit: () => void;
+  onRenameCancel: () => void;
+  onDeleteRequest: (e: React.MouseEvent) => void;
+}
+
+function ProjectCard({
+  project,
+  isRenaming,
+  renameValue,
+  renameInputRef,
+  onOpen,
+  onRenameStart,
+  onRenameChange,
+  onRenameCommit,
+  onRenameCancel,
+  onDeleteRequest,
+}: ProjectCardProps) {
+  const { t, dir } = useLocale();
+  const fileCount = project.files?.length ?? 0;
+  const totalRows = project.files?.reduce(
+    (sum, f) => sum + (f.rowCount ?? 0),
+    0,
+  );
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter") onRenameCommit();
+    if (e.key === "Escape") onRenameCancel();
+  }
+
+  return (
+    <div
+      dir={dir}
+      className="group relative flex items-center gap-4 rounded-xl border border-border bg-card p-4 hover:border-primary/30 hover:shadow-sm transition-all cursor-pointer"
+      onClick={isRenaming ? undefined : onOpen}
+      role="button"
+      tabIndex={isRenaming ? -1 : 0}
+      onKeyDown={
+        isRenaming
+          ? undefined
+          : (e) => {
+              if (e.key === "Enter" || e.key === " ") onOpen();
+            }
+      }
+    >
+      {/* Icon */}
+      <div className="p-2 rounded-lg bg-primary/8 text-primary shrink-0">
+        <FolderOpen className="w-5 h-5" />
+      </div>
+
+      {/* Name / rename input */}
+      <div className="flex-1 min-w-0">
+        {isRenaming ? (
+          <input
+            ref={renameInputRef}
+            value={renameValue}
+            autoFocus
+            onChange={(e) => onRenameChange(e.target.value)}
+            onBlur={onRenameCommit}
+            onKeyDown={handleKeyDown}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full text-sm font-semibold bg-transparent border-b border-primary outline-none text-foreground"
+            maxLength={100}
+            placeholder={t.dashboard.renameInputPlaceholder}
+          />
+        ) : (
+          <p className="text-sm font-semibold text-foreground truncate">
+            {project.name}
+          </p>
+        )}
+
+        {/* File stats */}
+        <div className="mt-0.5 flex items-center flex-wrap gap-x-2 gap-y-0.5">
+          {fileCount > 0 && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+              <FileSpreadsheet className="w-3 h-3" />
+              {fileCount === 1
+                ? `1 ${t.dashboard.file}`
+                : `${fileCount} ${t.dashboard.files}`}
+            </span>
+          )}
+          {totalRows > 0 && (
+            <span className="text-xs text-muted-foreground">
+              · {tpl(t.dashboard.rows, { n: totalRows.toLocaleString() })}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Actions (visible on hover) */}
+      {!isRenaming && (
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+          <button
+            onClick={onRenameStart}
+            aria-label={t.dashboard.renameProject}
+            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={onDeleteRequest}
+            aria-label={t.dashboard.deleteProject}
+            className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+          <ChevronRight className="w-4 h-4 text-muted-foreground/40 ms-1" />
+        </div>
+      )}
     </div>
   );
 }

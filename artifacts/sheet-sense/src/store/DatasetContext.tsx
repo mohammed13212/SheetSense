@@ -27,8 +27,12 @@ interface DatasetContextValue {
   activeId: string | null;
   activeDataset: Dataset | null;
 
-  /** Register a new parsed file. Returns the new dataset's id. */
-  addDataset: (file: ParsedFile) => string;
+  /**
+   * Register a new parsed file. Returns the new dataset's id.
+   * Pass `opts.serverFileId` to link the dataset to its persisted DB record,
+   * enabling relationship persistence across sessions.
+   */
+  addDataset: (file: ParsedFile, opts?: { serverFileId?: string; displayName?: string }) => string;
 
   /** Remove a dataset by id. Automatically selects the next dataset if active. */
   removeDataset: (id: string) => void;
@@ -66,13 +70,22 @@ export function DatasetProvider({ children }: { children: ReactNode }) {
   const datasetsRef = useRef<Dataset[]>(datasets);
   datasetsRef.current = datasets;
 
-  const addDataset = useCallback((file: ParsedFile): string => {
-    const id = `ds_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-    const dataset: Dataset = { id, uploadedAt: Date.now(), file };
-    setDatasets((prev) => [...prev, dataset]);
-    setActiveIdState(id);
-    return id;
-  }, []);
+  const addDataset = useCallback(
+    (file: ParsedFile, opts?: { serverFileId?: string; displayName?: string }): string => {
+      const id = `ds_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+      const dataset: Dataset = {
+        id,
+        uploadedAt: Date.now(),
+        file,
+        ...(opts?.serverFileId && { serverFileId: opts.serverFileId }),
+        ...(opts?.displayName && { displayName: opts.displayName }),
+      };
+      setDatasets((prev) => [...prev, dataset]);
+      setActiveIdState(id);
+      return id;
+    },
+    [],
+  );
 
   const removeDataset = useCallback((id: string) => {
     setDatasets((prev) => {

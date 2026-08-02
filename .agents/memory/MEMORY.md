@@ -1,1 +1,1 @@
-- [SheetSense Auth & Project Architecture](sheetsense-auth-arch.md) — Supabase auth, DB userId migration, API JWT middleware, ProjectContext, nav wiring.
+- [SheetSense Auth & Project Architecture](sheetsense-auth-arch.md) — Supabase auth, DB schema, API routes, object storage, ProjectContext, URL structure, i18n, and codegen quirks.

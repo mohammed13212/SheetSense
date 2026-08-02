@@ -12,6 +12,7 @@ import { useAuth } from "@/store/AuthContext";
 import { useProject } from "@/store/ProjectContext";
 import { parseFile, FileParseError } from "@/lib/parseFile";
 import { apiPost } from "@/lib/api";
+import { uploadToStorage } from "@/lib/projectLoader";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import type { Dataset } from "@/types";
 import type { ActiveProject, ProjectFile } from "@/store/ProjectContext";
@@ -62,9 +63,20 @@ export function DatasetSidebar({ isOpen, onClose }: DatasetSidebarProps) {
       try {
         for (const file of files) {
           const pf = await parseFile(file);
-          addDataset(pf);
           if (user) {
-            await persistFileSidebar(pf, file, user, activeProject, setActiveProject, addFileToProject);
+            // With auth: persist to storage + API, then add with serverFileId
+            const serverFileId = await persistFileSidebar(
+              pf,
+              file,
+              user,
+              activeProject,
+              setActiveProject,
+              addFileToProject,
+            );
+            addDataset(pf, { serverFileId: serverFileId ?? undefined });
+          } else {
+            // Without auth: add locally only
+            addDataset(pf);
           }
         }
       } catch (err) {
@@ -83,7 +95,8 @@ export function DatasetSidebar({ isOpen, onClose }: DatasetSidebarProps) {
         setIsUploading(false);
       }
     },
-    [addDataset, t, user, activeProject, setActiveProject, addFileToProject],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [addDataset, t, user, activeProject?.id, setActiveProject, addFileToProject],
   );
 
   const onFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -329,36 +342,59 @@ export function DatasetSidebar({ isOpen, onClose }: DatasetSidebarProps) {
 
 // ─── Persist helper (sidebar uploads) ─────────────────────────────────────────
 
+/**
+ * Uploads a file to object storage + saves the file record to the API.
+ * Returns the server-side UUID of the created file record, or null on error.
+ * Storage upload is best-effort — analysis still works locally if it fails.
+ */
 async function persistFileSidebar(
   pf: ParsedFile,
   file: File,
-  user: User,
+  _user: User,
   activeProject: ActiveProject | null,
   setActiveProject: (p: ActiveProject) => void,
   addFileToProject: (f: ProjectFile) => void,
-) {
+): Promise<string | null> {
   try {
     let project = activeProject;
     if (!project) {
+      // Create an auto-named project from the file name
       const projectName = file.name.replace(/\.[^.]+$/, "");
-      const created = await apiPost<ActiveProject>("/api/projects", { name: projectName });
+      const created = await apiPost<ActiveProject>("/api/projects", {
+        name: projectName,
+      });
       project = { ...created, files: [] };
       setActiveProject(project);
     }
-    const savedFile = await apiPost<ProjectFile>(`/api/projects/${project.id}/files`, {
-      originalName: file.name,
-      mimeType: file.type || "application/octet-stream",
-      fileSize: file.size,
-      rowCount: pf.rowCount ?? null,
-      colCount: pf.colCount ?? null,
-      headers: pf.headers ?? [],
-      sheetNames: pf.sheetNames ?? [],
-      dataQuality: pf.dataQuality ?? null,
-      isProcessed: true,
-    });
+
+    // Upload to object storage (best-effort)
+    let storageKey: string | null = null;
+    try {
+      storageKey = await uploadToStorage(file);
+    } catch {
+      // Storage failure is non-fatal — the file is still analysed locally
+    }
+
+    const savedFile = await apiPost<ProjectFile>(
+      `/api/projects/${project.id}/files`,
+      {
+        originalName: file.name,
+        mimeType: file.type || "application/octet-stream",
+        fileSize: file.size,
+        rowCount: pf.rowCount ?? null,
+        colCount: pf.colCount ?? null,
+        headers: pf.headers ?? [],
+        sheetNames: pf.sheetNames ?? [],
+        dataQuality: pf.dataQuality ?? null,
+        isProcessed: true,
+        storageKey,
+      },
+    );
     addFileToProject(savedFile);
+    return savedFile.id;
   } catch (err) {
     console.warn("Failed to persist sidebar upload:", err);
+    return null;
   }
 }
 

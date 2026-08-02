@@ -1,91 +1,88 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as SonnerToaster } from "@/components/ui/sonner";
-import { FloatingThemeToggle } from "@/components/FloatingThemeToggle";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/not-found";
-import { Route, Switch, Router as WouterRouter } from "wouter";
-import Home from "@/pages/Home";
-import RelationshipManager from "@/pages/RelationshipManager";
-import Login from "@/pages/Login";
-import Signup from "@/pages/Signup";
-import ForgotPassword from "@/pages/ForgotPassword";
-import Dashboard from "@/pages/Dashboard";
-import { LocaleProvider } from "@/i18n/context";
-import { DatasetProvider } from "@/store/DatasetContext";
-import { ThemeProvider } from "@/store/ThemeContext";
-import { AuthProvider } from "@/store/AuthContext";
-import { ProjectProvider } from "@/store/ProjectContext";
-import { ProtectedRoute, GuestRoute } from "@/components/auth/ProtectedRoute";
+import { Switch, Route, Redirect } from "wouter";
+import { Suspense, lazy } from "react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { AuthProvider, useAuth } from "@/store/AuthContext";
+import { DatasetProvider } from "@/store/DatasetContext";
+import { ProjectProvider } from "@/store/ProjectContext";
+import { ThemeProvider } from "@/store/ThemeContext";
+import { LocaleProvider } from "@/i18n/context";
+import { Toaster as SmartToaster } from "@/components/ui/sonner";
 
-const queryClient = new QueryClient();
+const Home = lazy(() => import("@/pages/Home"));
+const Dashboard = lazy(() => import("@/pages/Dashboard"));
+const ProjectWorkspace = lazy(() => import("@/pages/ProjectWorkspace"));
+const RelationshipManager = lazy(() => import("@/pages/RelationshipManager"));
+const LoginPage = lazy(() => import("@/pages/Login"));
+const SignupPage = lazy(() => import("@/pages/Signup"));
+const ForgotPasswordPage = lazy(() => import("@/pages/ForgotPassword"));
+const NotFoundPage = lazy(() => import("@/pages/not-found"));
 
-function Router() {
+function AppRoutes() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex h-[100dvh] items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-3 border-primary/30 border-t-primary rounded-full animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <Switch>
-      {/* Public + authenticated — Workspace */}
-      <Route path="/" component={Home} />
-      <Route path="/relationships" component={RelationshipManager} />
+    <Suspense fallback={null}>
+      <Switch>
+        {/* ── Public landing / anonymous workspace ── */}
+        <Route path="/" component={Home} />
 
-      {/* Guest-only: redirect authenticated users to /dashboard */}
-      <Route path="/login">
-        <GuestRoute><Login /></GuestRoute>
-      </Route>
-      <Route path="/signup">
-        <GuestRoute><Signup /></GuestRoute>
-      </Route>
-      <Route path="/forgot-password">
-        <GuestRoute><ForgotPassword /></GuestRoute>
-      </Route>
+        {/* ── Auth routes ── */}
+        <Route path="/login" component={LoginPage} />
+        <Route path="/signup" component={SignupPage} />
+        <Route path="/forgot-password" component={ForgotPasswordPage} />
 
-      {/* Protected: redirect unauthenticated users to /login */}
-      <Route path="/dashboard">
-        <ProtectedRoute><Dashboard /></ProtectedRoute>
-      </Route>
+        {/* ── Authenticated: Dashboard ── */}
+        <Route path="/dashboard">
+          {user ? <Dashboard /> : <Redirect to="/login" />}
+        </Route>
 
-      <Route component={NotFound} />
-    </Switch>
+        {/* ── Authenticated: Project workspace ── */}
+        <Route path="/projects/:projectId">
+          {user ? <ProjectWorkspace /> : <Redirect to="/login" />}
+        </Route>
+
+        {/* ── Authenticated: Relationship manager ── */}
+        <Route path="/projects/:projectId/relationships">
+          {user ? <RelationshipManager /> : <Redirect to="/login" />}
+        </Route>
+
+        {/* Legacy /relationships redirect — send to dashboard if no project context */}
+        <Route path="/relationships">
+          {user ? <Redirect to="/dashboard" /> : <Redirect to="/login" />}
+        </Route>
+
+        {/* ── 404 ── */}
+        <Route component={NotFoundPage} />
+      </Switch>
+    </Suspense>
   );
 }
 
-/** Renders the Sonner toaster with position adapted for viewport size */
-function SmartToaster() {
-  const isMobile = useIsMobile();
+export default function App() {
   return (
-    <SonnerToaster
-      position={isMobile ? "top-center" : "bottom-right"}
-      richColors
-    />
+    <ErrorBoundary>
+      <ThemeProvider>
+        <LocaleProvider>
+          <AuthProvider>
+            <ProjectProvider>
+              <DatasetProvider>
+                <AppRoutes />
+                <SmartToaster />
+              </DatasetProvider>
+            </ProjectProvider>
+          </AuthProvider>
+        </LocaleProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
-
-function App() {
-  return (
-    <ThemeProvider>
-      <LocaleProvider>
-        <AuthProvider>
-          <ProjectProvider>
-            <DatasetProvider>
-              <QueryClientProvider client={queryClient}>
-                <TooltipProvider>
-                  <ErrorBoundary>
-                    <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-                      <Router />
-                    </WouterRouter>
-                  </ErrorBoundary>
-                  <Toaster />
-                  <SmartToaster />
-                  <FloatingThemeToggle />
-                </TooltipProvider>
-              </QueryClientProvider>
-            </DatasetProvider>
-          </ProjectProvider>
-        </AuthProvider>
-      </LocaleProvider>
-    </ThemeProvider>
-  );
-}
-
-export default App;

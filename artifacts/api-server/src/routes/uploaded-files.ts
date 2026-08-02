@@ -36,8 +36,8 @@ router.get("/projects/:projectId/files", requireAuth, async (req, res) => {
     .where(
       and(
         eq(projectsTable.id, projectId),
-        eq(projectsTable.userId, req.userId!)
-      )
+        eq(projectsTable.userId, req.userId!),
+      ),
     )
     .limit(1);
 
@@ -58,6 +58,7 @@ router.get("/projects/:projectId/files", requireAuth, async (req, res) => {
 /**
  * POST /api/projects/:projectId/files
  * Associates an uploaded file record with a project. Requires ownership.
+ * Accepts an optional storageKey (the GCS object path) for file retrieval.
  */
 router.post("/projects/:projectId/files", requireAuth, async (req, res) => {
   const paramResult = projectIdParam.safeParse(req.params);
@@ -75,8 +76,8 @@ router.post("/projects/:projectId/files", requireAuth, async (req, res) => {
     .where(
       and(
         eq(projectsTable.id, projectId),
-        eq(projectsTable.userId, req.userId!)
-      )
+        eq(projectsTable.userId, req.userId!),
+      ),
     )
     .limit(1);
 

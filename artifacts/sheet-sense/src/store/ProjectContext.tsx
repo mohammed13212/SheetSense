@@ -1,12 +1,12 @@
 /**
- * ProjectContext — tracks the currently active server-side project.
+ * ProjectContext — tracks the currently active project and its persisted state.
  *
- * An "active project" is created on the server when an authenticated user
- * uploads their first file. Subsequent uploads in the same session add files
- * to the same project.
+ * The active project is the source of truth for the workspace. When a user
+ * opens a project from the Dashboard (/projects/:id), this context is
+ * populated from the API. It is cleared on Dashboard navigation or sign-out.
  *
- * Unauthenticated users have no active project (null). Their uploads are
- * local-only (existing behaviour is unchanged).
+ * Relationships are stored here so they are available to both the workspace
+ * and the RelationshipManager without re-fetching.
  */
 
 import {
@@ -29,6 +29,8 @@ export interface ProjectFile {
   colCount: number | null;
   headers: string[];
   sheetNames: string[];
+  storageKey: string | null;
+  displayName: string | null;
   createdAt: string;
 }
 
@@ -41,17 +43,45 @@ export interface ActiveProject {
   files: ProjectFile[];
 }
 
+/** A persisted relationship record returned by the API. */
+export interface PersistedRelationship {
+  id: string;
+  projectId: string;
+  sourceFileId: string;
+  sourceColumn: string;
+  targetFileId: string;
+  targetColumn: string;
+  confidence: number;
+  confidenceLevel: "high" | "medium" | "low";
+  isAutoCreated: boolean;
+  label: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface ProjectContextValue {
   /** The currently open project, or null if no project is active. */
   activeProject: ActiveProject | null;
 
-  /** Set the active project (e.g. when opening one from the Dashboard). */
+  /** Persisted relationships for the active project. */
+  relationships: PersistedRelationship[];
+
+  /** Set the active project (e.g. when opening from the Dashboard). */
   setActiveProject: (project: ActiveProject) => void;
+
+  /** Replace the entire relationships list (e.g. after loading from API). */
+  setRelationships: (rels: PersistedRelationship[]) => void;
+
+  /** Append a newly created relationship (optimistic / after API create). */
+  addRelationship: (rel: PersistedRelationship) => void;
+
+  /** Remove a relationship by ID (optimistic / after API delete). */
+  removeRelationship: (id: string) => void;
 
   /** Add a file record to the active project (after a successful API save). */
   addFileToProject: (file: ProjectFile) => void;
 
-  /** Clear the active project (e.g. when starting a "New Project"). */
+  /** Clear the active project and its relationships. */
   clearActiveProject: () => void;
 }
 
@@ -64,26 +94,46 @@ const ProjectContext = createContext<ProjectContextValue | null>(null);
 export function ProjectProvider({ children }: { children: ReactNode }) {
   const [activeProject, setActiveProjectState] =
     useState<ActiveProject | null>(null);
+  const [relationships, setRelationshipsState] = useState<
+    PersistedRelationship[]
+  >([]);
 
   const setActiveProject = useCallback((project: ActiveProject) => {
     setActiveProjectState(project);
   }, []);
 
+  const setRelationships = useCallback((rels: PersistedRelationship[]) => {
+    setRelationshipsState(rels);
+  }, []);
+
+  const addRelationship = useCallback((rel: PersistedRelationship) => {
+    setRelationshipsState((prev) => [...prev, rel]);
+  }, []);
+
+  const removeRelationship = useCallback((id: string) => {
+    setRelationshipsState((prev) => prev.filter((r) => r.id !== id));
+  }, []);
+
   const addFileToProject = useCallback((file: ProjectFile) => {
     setActiveProjectState((prev) =>
-      prev ? { ...prev, files: [...prev.files, file] } : prev
+      prev ? { ...prev, files: [...prev.files, file] } : prev,
     );
   }, []);
 
   const clearActiveProject = useCallback(() => {
     setActiveProjectState(null);
+    setRelationshipsState([]);
   }, []);
 
   return (
     <ProjectContext.Provider
       value={{
         activeProject,
+        relationships,
         setActiveProject,
+        setRelationships,
+        addRelationship,
+        removeRelationship,
         addFileToProject,
         clearActiveProject,
       }}

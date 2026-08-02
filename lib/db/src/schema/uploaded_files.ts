@@ -64,6 +64,19 @@ export const uploadedFilesTable = pgTable("uploaded_files", {
   /** Whether this file has been fully processed and is ready for analysis. */
   isProcessed: boolean("is_processed").notNull().default(false),
 
+  /**
+   * Object storage path for the raw file binary (e.g. "/objects/uploads/uuid").
+   * NULL for files uploaded before object storage was enabled.
+   * Used to re-hydrate the workspace when a project is re-opened.
+   */
+  storageKey: text("storage_key"),
+
+  /**
+   * User-assigned display name for this file (e.g. "Q1 Sales").
+   * NULL means the UI falls back to `original_name`.
+   */
+  displayName: text("display_name"),
+
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

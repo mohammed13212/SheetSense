@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import {
   GitBranch,
   Database,
@@ -17,16 +17,18 @@ import {
   CheckCircle2,
   Check,
 } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useParams } from "wouter";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useLocale } from "@/i18n/context";
 import { tpl } from "@/i18n/tpl";
 import { useDatasets } from "@/store/DatasetContext";
 import { useAuth } from "@/store/AuthContext";
+import { useProject } from "@/store/ProjectContext";
 import { AuthNav } from "@/components/AuthNav";
 import { AppHeader } from "@/components/AppHeader";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { apiPost, apiDelete } from "@/lib/api";
 import type { Dataset } from "@/types";
 
 // ─── Domain types ─────────────────────────────────────────────────────────────
@@ -77,10 +79,19 @@ export default function RelationshipManager() {
   const { t, dir } = useLocale();
   const { datasets } = useDatasets();
   const { user } = useAuth();
+  const { activeProject, relationships: persistedRels, addRelationship, removeRelationship } = useProject();
+  const params = useParams<{ projectId: string }>();
+  const projectId = params.projectId ?? activeProject?.id ?? null;
+
+  // Back link to the project workspace (if project context is available)
+  const workspaceHref = projectId ? `/projects/${projectId}` : "/";
 
   const hasDatasets = datasets.length > 0;
 
   // ── Relationships state ────────────────────────────────────────────────────
+  // Local relationships are a superset of persisted ones. When the project is
+  // loaded, persisted relationships are mapped to the local format using
+  // dataset.serverFileId as the bridge.
   const [relationships, setRelationships] = useState<Relationship[]>([]);
   const [dismissedKeys, setDismissedKeys] = useState<Set<string>>(() => new Set());
   const [editorInit, setEditorInit] = useState<EditorInit | null>(null);
@@ -89,6 +100,40 @@ export default function RelationshipManager() {
   // Soft-delete: hidden IDs are removed from view immediately; permanent after undo expires
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  // ── Load persisted relationships into local state on mount ─────────────────
+  useEffect(() => {
+    if (!persistedRels.length || !datasets.length) return;
+    const mapped: Relationship[] = [];
+    for (const pr of persistedRels) {
+      const dsA = datasets.find(d => d.serverFileId === pr.sourceFileId);
+      const dsB = datasets.find(d => d.serverFileId === pr.targetFileId);
+      if (!dsA || !dsB) continue;
+
+      // Resolve column info from the parsed file headers
+      const colAIdx = dsA.file.headers.indexOf(pr.sourceColumn);
+      const colBIdx = dsB.file.headers.indexOf(pr.targetColumn);
+
+      mapped.push({
+        id: pr.id,
+        datasetAId: dsA.id,
+        datasetBId: dsB.id,
+        colA: {
+          index: colAIdx >= 0 ? colAIdx : 0,
+          name: pr.sourceColumn,
+          type: "unknown",
+        },
+        colB: {
+          index: colBIdx >= 0 ? colBIdx : 0,
+          name: pr.targetColumn,
+          type: "unknown",
+        },
+        confidence: pr.confidenceLevel as Confidence,
+      });
+    }
+    if (mapped.length) setRelationships(mapped);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Editor helpers ────────────────────────────────────────────────────────
   const openCreate = useCallback(() => setEditorInit({}), []);
@@ -106,7 +151,7 @@ export default function RelationshipManager() {
     });
   }, [datasets]);
 
-  const saveRelationship = useCallback((rel: Relationship) => {
+  const saveRelationship = useCallback(async (rel: Relationship) => {
     setRelationships(prev => {
       const idx = prev.findIndex(r => r.id === rel.id);
       if (idx >= 0) {
@@ -117,7 +162,38 @@ export default function RelationshipManager() {
       return [...prev, rel];
     });
     setEditorInit(null);
-  }, []);
+
+    // Persist to API if we have a project and both datasets have server IDs
+    if (!projectId) return;
+    const dsA = datasets.find(d => d.id === rel.datasetAId);
+    const dsB = datasets.find(d => d.id === rel.datasetBId);
+    if (!dsA?.serverFileId || !dsB?.serverFileId) return;
+
+    try {
+      const saved = await apiPost(
+        `/api/projects/${projectId}/relationships`,
+        {
+          sourceFileId: dsA.serverFileId,
+          sourceColumn: rel.colA.name,
+          targetFileId: dsB.serverFileId,
+          targetColumn: rel.colB.name,
+          confidence: rel.confidence === "high" ? 90 : rel.confidence === "medium" ? 60 : 30,
+          confidenceLevel: rel.confidence ?? "low",
+          isAutoCreated: false,
+        },
+      );
+      // Replace local UUID with server UUID for subsequent deletes
+      if (saved && typeof saved === "object" && "id" in saved) {
+        const serverId = (saved as { id: string }).id;
+        setRelationships(prev =>
+          prev.map(r => r.id === rel.id ? { ...r, id: serverId } : r),
+        );
+        addRelationship(saved as Parameters<typeof addRelationship>[0]);
+      }
+    } catch {
+      toast.error(t.relationships.savingError);
+    }
+  }, [projectId, datasets, addRelationship, t.relationships.savingError]);
 
   // Opens the confirm dialog
   const requestDeleteRelationship = useCallback((id: string) => {
@@ -153,16 +229,27 @@ export default function RelationshipManager() {
         if (!undone) {
           setRelationships(prev => prev.filter(r => r.id !== id));
           setHiddenIds(prev => { const next = new Set(prev); next.delete(id); return next; });
+          // Delete from server
+          if (projectId) {
+            apiDelete(`/api/projects/${projectId}/relationships/${id}`)
+              .catch(() => toast.error(t.relationships.deletingError));
+            removeRelationship(id);
+          }
         }
       },
       onAutoClose: () => {
         if (!undone) {
           setRelationships(prev => prev.filter(r => r.id !== id));
           setHiddenIds(prev => { const next = new Set(prev); next.delete(id); return next; });
+          if (projectId) {
+            apiDelete(`/api/projects/${projectId}/relationships/${id}`)
+              .catch(() => toast.error(t.relationships.deletingError));
+            removeRelationship(id);
+          }
         }
       },
     });
-  }, [confirmDeleteId, selectedDiagramId]);
+  }, [confirmDeleteId, selectedDiagramId, projectId, removeRelationship, t.relationships.deletingError]);
 
   // ── Suggestion helpers ────────────────────────────────────────────────────
   const dismissKey = (dsAId: string, dsBId: string, suggestionId: string) =>
@@ -224,7 +311,7 @@ export default function RelationshipManager() {
             <div className="flex items-start gap-4">
               {/* Back to Workspace */}
               <Link
-                href="/"
+                href={workspaceHref}
                 className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors shrink-0 mt-1"
               >
                 <ChevronLeft className="w-4 h-4" />
@@ -264,7 +351,7 @@ export default function RelationshipManager() {
                 <p className="text-sm text-muted-foreground">{t.relationships.noDatasetsSub}</p>
               </div>
               <Link
-                href="/"
+                href={workspaceHref}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
               >
                 {t.relationships.goToWorkspace}

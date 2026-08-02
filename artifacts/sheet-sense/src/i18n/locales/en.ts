@@ -78,10 +78,25 @@ const en: Translations = {
     file: "file",
     files: "files",
     rows: "{n} rows",
+    createProject: "New Project",
+    projectNameLabel: "Project name",
+    projectNamePlaceholder: "e.g. Q1 Sales Analysis",
+    creating: "Creating…",
+    createError: "Could not create project. Please try again.",
   },
   workspace: {
     addFileTo: 'Add a file to "{name}"',
     backToDashboard: "Dashboard",
+    loadingProject: "Opening project…",
+    loadingProjectSub: "Downloading files and rebuilding your workspace",
+    projectNotFound: "Project not found",
+    projectNotFoundSub:
+      "This project may have been deleted or you don't have access.",
+    openingError: "Failed to open project",
+    uploadFirstFile: "Upload your first file to get started",
+    filesUnavailable:
+      "{n} file(s) could not be re-loaded from storage and will need to be re-uploaded.",
+    addDataset: "Add dataset",
   },
   hero: {
     heading: "Analyze Excel & CSV files in seconds.",
@@ -343,6 +358,8 @@ const en: Translations = {
       emptySub: "Accepted relationships will appear here as a visual diagram",
       clickHint: "Click a relationship to edit or delete it",
     },
+    savingError: "Could not save relationship. Please try again.",
+    deletingError: "Could not delete relationship. Please try again.",
   },
   viz: {
     sectionTitle: "Data Visualizations",

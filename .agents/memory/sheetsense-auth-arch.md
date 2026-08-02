@@ -1,36 +1,66 @@
 ---
 name: SheetSense Auth & Project Architecture
-description: Key decisions and constraints for the SheetSense auth + persistence layer.
+description: Supabase auth, DB schema, API patterns, ProjectContext, routing, object storage, and persistence decisions.
 ---
 
-## Auth (Supabase)
-- Supabase credentials stored as shared env vars: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
-- Frontend singleton client in `artifacts/sheet-sense/src/lib/supabase.ts`
-- `AuthContext` (`src/store/AuthContext.tsx`) wraps the whole app; provides `user`, `session`, `loading`, `signIn`, `signUp`, `signOut`, `resetPassword`
-- Route guards: `ProtectedRoute` (→ /login) and `GuestRoute` (→ /dashboard) in `src/components/auth/ProtectedRoute.tsx`
+## Auth
+- Supabase auth (not Replit Auth). JWT middleware: `requireAuth` in `artifacts/api-server/src/middlewares/auth.ts`.
+- `req.userId` is set by `requireAuth`. Never use `req.isAuthenticated()` (Replit Auth pattern).
+- Frontend Supabase client: `artifacts/sheet-sense/src/lib/supabase.ts`.
+- Auth session token extracted via `supabase.auth.getSession()` for storage API calls.
 
-## DB Schema
-- `projects` table has `user_id text NOT NULL` (Supabase auth UID)
-- `uploaded_files` table is linked to projects via FK with `ON DELETE CASCADE`
-- Schema lives in `lib/db/src/schema/`; use `drizzle-kit push` in `lib/db/` to migrate (no migrations folder — push-only)
+## Database Schema
+- Projects: `projectsTable` — now includes `lastOpenedAt` (nullable timestamp) for "recently opened" sorting.
+- Files: `uploadedFilesTable` — now includes `storageKey` (GCS object path) and `displayName`.
+- Relationships: `relationshipsTable` — already existed with full schema.
+- Drizzle ORM, PostgreSQL. Push schema: `pnpm --filter @workspace/db run push`.
 
-**Why:** Added `userId` column to scope every project to exactly one Supabase user.
+## API Routes (all require `requireAuth`)
+- `GET/POST /api/projects` — list (sorted lastOpenedAt DESC NULLS LAST, createdAt DESC) and create.
+- `GET/PATCH/DELETE /api/projects/:id` — single project with files attached.
+- `PATCH /api/projects/:id/touch` — sets lastOpenedAt = now. Called fire-and-forget on project open.
+- `GET/POST /api/projects/:id/files` — file list and create (accepts storageKey).
+- `GET/POST/DELETE /api/projects/:id/relationships` — relationship CRUD with ownership checks.
+- `POST /api/storage/uploads/request-url` — returns GCS presigned PUT URL + objectPath.
+- `GET /api/storage/objects/*` — serves private file binaries with ownership check via DB join.
+- `GET /api/storage/public-objects/*` — serves public assets (no auth).
 
-## API Server Auth
-- `artifacts/api-server/src/middlewares/auth.ts` — `requireAuth` middleware verifies Supabase JWT via `supabase.auth.getUser(token)`
-- Reads `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` (shared vars; accessible from Node.js too despite VITE_ prefix)
-- All project + file routes are auth-gated; userId injected as `req.userId`
+## Object Storage
+- Bucket ID in env: `DEFAULT_OBJECT_STORAGE_BUCKET_ID`.
+- `ObjectStorageService` in `artifacts/api-server/src/lib/objectStorage.ts`.
+- Upload flow: client requests presigned URL → PUT binary directly to GCS → save objectPath as `storageKey` in DB.
+- `storageKey` format: `/objects/uploads/<uuid>`. Serve route strips leading `/objects` for the wildcard.
+- Storage upload is best-effort — analysis always works locally even if storage fails.
 
-## Frontend API Client
-- `src/lib/api.ts` — thin fetch wrapper that reads the Supabase session JWT and sends it as `Authorization: Bearer`
-- API server is served at `/api` path (same origin); no base URL prefix needed. `BASE_URL` in Vite = `/`
+## URL Structure (Approved Architecture)
+- `/` — public landing page. Authenticated users redirect to `/dashboard`.
+- `/dashboard` — project list, sorted by recently opened.
+- `/projects/:projectId` — workspace (ProjectWorkspace.tsx). Source of truth for active project.
+- `/projects/:projectId/relationships` — RelationshipManager with persistence.
+- `/login`, `/signup`, `/forgot-password` — auth pages.
+- Legacy `/relationships` redirects to `/dashboard` (no project context).
 
-## Project State
-- `ProjectContext` (`src/store/ProjectContext.tsx`) tracks the currently open server-side project in memory
-- `setActiveProject()` / `clearActiveProject()` — called from Dashboard and Home
-- Persistence is best-effort: file upload saves to DB in background; failures don't block local analysis
+## Frontend State Architecture
+- `ProjectContext` — activeProject (id, name, files), relationships (PersistedRelationship[]).
+- `DatasetContext` — in-memory datasets (Dataset[]). `addDataset(file, opts?)` accepts `serverFileId`.
+- `Dataset.serverFileId` — bridges local dataset id (`ds_...`) to DB UUID for relationship persistence.
+- `loadProject(projectId)` in `lib/projectLoader.ts` — fetches project + downloads binaries + parses + loads relationships.
+- `uploadToStorage(file)` in `lib/projectLoader.ts` — requests presigned URL, PUTs binary to GCS, returns objectPath.
 
-## Navigation
-- `AppHeader` shows Dashboard/Workspace/Relationships nav when `isInWorkspace=true` and user is authenticated
-- Unauthenticated landing: shows Log In / Sign Up; authenticated landing: shows Dashboard button
-- `ERR_INVALID_URL` in browser console is pre-existing (Replit dev plugin), not related to app code
+## i18n Notes
+- `RTL_LOCALES` is exported from `i18n/types.ts` as `readonly string[]` (not `as const` tuple) to avoid TS2345 with `includes()`.
+- `types.ts` key names MUST match the locale files exactly. Previous rewrite broke alignment — be careful.
+- Locale files are the source of truth for key names (en.ts, ar.ts).
+
+## Codegen (lib/api-spec)
+- `pnpm --filter @workspace/api-spec run codegen` — runs orval then `tsc --build`.
+- orval APPENDS to `lib/api-zod/src/index.ts` — do NOT manually edit that file; let orval own it.
+- The `schemas` option was removed from orval zod config to avoid name collisions between Zod schemas and TS interfaces.
+- Generated Zod schemas are in `lib/api-zod/src/generated/api.ts`.
+
+## Quirks / Non-obvious Decisions
+- `next-themes` in `ui/sonner.tsx` causes a cosmetic `ERR_INVALID_URL` in browser console — harmless.
+- `pino-http` provides `req.log` on all requests — use it for structured logging in routes.
+- The `relationships.ts` route validates that both files belong to the project before inserting.
+- `DatasetSidebar` upload flow (authenticated): parse → upload to storage → save to API with storageKey → addDataset with serverFileId. Storage failure is non-fatal.
+- `not-found.tsx` is lowercase with hyphen (not `NotFound.tsx`) — use `import("@/pages/not-found")`.

@@ -28,6 +28,13 @@ export const projectsTable = pgTable("projects", {
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
+
+  /**
+   * Tracks the most recent time the project was opened in the workspace.
+   * NULL for projects that have never been opened after this column was added.
+   * Used to sort Dashboard by "recently opened".
+   */
+  lastOpenedAt: timestamp("last_opened_at", { withTimezone: true }),
 });
 
 // ---------------------------------------------------------------------------
