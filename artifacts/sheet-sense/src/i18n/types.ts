@@ -154,6 +154,8 @@ export interface Translations {
     deleted: string;
     datasetOptions: string;
     confirmDeleteTitle: string;
+    renameError: string;
+    deleteError: string;
   };
 
   fileStats: {

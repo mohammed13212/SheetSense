@@ -11,7 +11,7 @@ import { useDatasets } from "@/store/DatasetContext";
 import { useAuth } from "@/store/AuthContext";
 import { useProject } from "@/store/ProjectContext";
 import { parseFile, FileParseError } from "@/lib/parseFile";
-import { apiPost } from "@/lib/api";
+import { apiPost, apiPatch, apiDelete } from "@/lib/api";
 import { uploadToStorage } from "@/lib/projectLoader";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import type { Dataset } from "@/types";
@@ -35,7 +35,13 @@ export function DatasetSidebar({ isOpen, onClose }: DatasetSidebarProps) {
     removeDataset, addDataset, renameDataset, reorderDatasets,
   } = useDatasets();
   const { user } = useAuth();
-  const { activeProject, setActiveProject, addFileToProject } = useProject();
+  const {
+    activeProject,
+    setActiveProject,
+    addFileToProject,
+    removeFileFromProject,
+    updateFileDisplayName,
+  } = useProject();
 
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -170,6 +176,24 @@ export function DatasetSidebar({ isOpen, onClose }: DatasetSidebarProps) {
 
     let undone = false;
 
+    const commitDelete = () => {
+      if (undone) return;
+      removeDataset(dataset.id);
+      setHiddenIds((prev) => {
+        const next = new Set(prev);
+        next.delete(dataset.id);
+        return next;
+      });
+      // Sync to server: delete DB record + GCS object
+      if (dataset.serverFileId && activeProject) {
+        apiDelete(
+          `/api/projects/${activeProject.id}/files/${dataset.serverFileId}`,
+        )
+          .then(() => removeFileFromProject(dataset.serverFileId!))
+          .catch(() => toast.error(t.datasets.deleteError));
+      }
+    };
+
     toast(tpl(t.datasets.deleted, { name: displayName }), {
       duration: 7000,
       action: {
@@ -183,26 +207,8 @@ export function DatasetSidebar({ isOpen, onClose }: DatasetSidebarProps) {
           });
         },
       },
-      onDismiss: () => {
-        if (!undone) {
-          removeDataset(dataset.id);
-          setHiddenIds((prev) => {
-            const next = new Set(prev);
-            next.delete(dataset.id);
-            return next;
-          });
-        }
-      },
-      onAutoClose: () => {
-        if (!undone) {
-          removeDataset(dataset.id);
-          setHiddenIds((prev) => {
-            const next = new Set(prev);
-            next.delete(dataset.id);
-            return next;
-          });
-        }
-      },
+      onDismiss: commitDelete,
+      onAutoClose: commitDelete,
     });
   }
 
@@ -315,7 +321,21 @@ export function DatasetSidebar({ isOpen, onClose }: DatasetSidebarProps) {
               dropBefore={dropBefore}
               onSelect={() => { setActiveId(dataset.id); onClose(); }}
               onRemove={() => handleDeleteRequest(dataset)}
-              onRename={(name) => renameDataset(dataset.id, name)}
+              onRename={(name) => {
+                renameDataset(dataset.id, name);
+                // Sync display name to server if this dataset is persisted
+                if (dataset.serverFileId && activeProject) {
+                  const newName = name.trim() || null;
+                  apiPatch(
+                    `/api/projects/${activeProject.id}/files/${dataset.serverFileId}`,
+                    { displayName: newName },
+                  )
+                    .then(() =>
+                      updateFileDisplayName(dataset.serverFileId!, newName),
+                    )
+                    .catch(() => toast.error(t.datasets.renameError));
+                }
+              }}
               onDragStart={(e) => onCardDragStart(e, dataset.id)}
               onDragOver={(e) => onCardDragOver(e, dataset.id)}
               onDragLeave={onCardDragLeave}

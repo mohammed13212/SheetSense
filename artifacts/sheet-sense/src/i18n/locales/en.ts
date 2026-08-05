@@ -143,6 +143,8 @@ const en: Translations = {
     deleted: '"{name}" deleted.',
     datasetOptions: "Dataset options",
     confirmDeleteTitle: "Delete Dataset?",
+    renameError: "Could not rename dataset. Please try again.",
+    deleteError: "Could not delete dataset. Please try again.",
   },
   fileStats: {
     fileName: "File Name",

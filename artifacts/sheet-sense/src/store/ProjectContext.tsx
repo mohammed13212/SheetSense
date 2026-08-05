@@ -81,6 +81,12 @@ interface ProjectContextValue {
   /** Add a file record to the active project (after a successful API save). */
   addFileToProject: (file: ProjectFile) => void;
 
+  /** Remove a file record from the active project (after a successful API delete). */
+  removeFileFromProject: (fileId: string) => void;
+
+  /** Update the displayName of a file in the active project (after a successful API patch). */
+  updateFileDisplayName: (fileId: string, displayName: string | null) => void;
+
   /** Clear the active project and its relationships. */
   clearActiveProject: () => void;
 }
@@ -120,6 +126,30 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
+  const removeFileFromProject = useCallback((fileId: string) => {
+    setActiveProjectState((prev) =>
+      prev
+        ? { ...prev, files: prev.files.filter((f) => f.id !== fileId) }
+        : prev,
+    );
+  }, []);
+
+  const updateFileDisplayName = useCallback(
+    (fileId: string, displayName: string | null) => {
+      setActiveProjectState((prev) =>
+        prev
+          ? {
+              ...prev,
+              files: prev.files.map((f) =>
+                f.id === fileId ? { ...f, displayName } : f,
+              ),
+            }
+          : prev,
+      );
+    },
+    [],
+  );
+
   const clearActiveProject = useCallback(() => {
     setActiveProjectState(null);
     setRelationshipsState([]);
@@ -135,6 +165,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         addRelationship,
         removeRelationship,
         addFileToProject,
+        removeFileFromProject,
+        updateFileDisplayName,
         clearActiveProject,
       }}
     >

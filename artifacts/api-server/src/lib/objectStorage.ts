@@ -209,6 +209,21 @@ export class ObjectStorageService {
       requestedPermission: requestedPermission ?? ObjectPermission.READ,
     });
   }
+
+  /**
+   * Delete an object from storage by its storageKey (e.g. "/objects/uploads/uuid").
+   * Silently succeeds if the object does not exist.
+   */
+  async deleteObject(storageKey: string): Promise<void> {
+    try {
+      const objectFile = await this.getObjectEntityFile(storageKey);
+      await objectFile.delete();
+    } catch (err) {
+      // ObjectNotFoundError is acceptable — object already gone or never uploaded
+      if (err instanceof ObjectNotFoundError) return;
+      throw err;
+    }
+  }
 }
 
 function parseObjectPath(path: string): {

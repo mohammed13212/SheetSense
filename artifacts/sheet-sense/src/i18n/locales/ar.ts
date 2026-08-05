@@ -140,6 +140,8 @@ const ar: Translations = {
     deleted: 'تم حذف "{name}".',
     datasetOptions: "خيارات المجموعة",
     confirmDeleteTitle: "حذف المجموعة؟",
+    renameError: "تعذّرت إعادة تسمية المجموعة. يرجى المحاولة مجدداً.",
+    deleteError: "تعذّر حذف المجموعة. يرجى المحاولة مجدداً.",
   },
   fileStats: {
     fileName: "اسم الملف",

@@ -58,6 +58,20 @@ description: Supabase auth, DB schema, API patterns, ProjectContext, routing, ob
 - The `schemas` option was removed from orval zod config to avoid name collisions between Zod schemas and TS interfaces.
 - Generated Zod schemas are in `lib/api-zod/src/generated/api.ts`.
 
+## Dataset Rename/Delete Persistence
+- `PATCH /api/projects/:projectId/files/:fileId` — updates `displayName` (nullable). Verified ownership via project.
+- `DELETE /api/projects/:projectId/files/:fileId` — deletes DB record first, then fires GCS delete as best-effort (non-fatal).
+- `ObjectStorageService.deleteObject(storageKey)` — silently succeeds on ObjectNotFoundError.
+- `ProjectContext` now has `removeFileFromProject(fileId)` and `updateFileDisplayName(fileId, displayName)`.
+- DatasetSidebar rename: `renameDataset()` (local) → `apiPatch` → `updateFileDisplayName` (context). Error toast on failure.
+- DatasetSidebar delete: optimistic hide → undo toast → on toast expire: `removeDataset()` (local) + `apiDelete` + `removeFileFromProject`. The server is only called after the undo window closes, never on undo.
+
+## RelationshipManager Resilience (Direct Navigation)
+- On mount, RelationshipManager checks `activeProject?.id === projectId`. If they differ, it calls `loadProject()` (dynamic import to avoid circular deps) and fully hydrates DatasetContext + ProjectContext.
+- `hydratedIdRef` prevents double-hydration. `mappedOnceRef` prevents re-seeding local relationships after the user has made edits.
+- Shows loading/not-found/error screens (matching ProjectWorkspace pattern) during hydration.
+- The persisted→local relationship mapping effect now has proper deps (`[pageLoadState, persistedRels, datasets]`) instead of the previous empty deps `[]`, so it fires after async hydration completes.
+
 ## Quirks / Non-obvious Decisions
 - `next-themes` in `ui/sonner.tsx` causes a cosmetic `ERR_INVALID_URL` in browser console — harmless.
 - `pino-http` provides `req.log` on all requests — use it for structured logging in routes.

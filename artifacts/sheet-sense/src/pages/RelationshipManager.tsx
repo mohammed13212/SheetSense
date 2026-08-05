@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import {
   GitBranch,
   Database,
@@ -16,6 +16,9 @@ import {
   X,
   CheckCircle2,
   Check,
+  FolderOpen,
+  AlertCircle,
+  RefreshCw,
 } from "lucide-react";
 import { Link, useParams } from "wouter";
 import { toast } from "sonner";
@@ -29,6 +32,7 @@ import { AuthNav } from "@/components/AuthNav";
 import { AppHeader } from "@/components/AppHeader";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { apiPost, apiDelete } from "@/lib/api";
+import { loadProject } from "@/lib/projectLoader";
 import type { Dataset } from "@/types";
 
 // ─── Domain types ─────────────────────────────────────────────────────────────
@@ -75,11 +79,20 @@ interface EditorInit {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+type PageLoadState = "idle" | "loading" | "ready" | "not-found" | "error";
+
 export default function RelationshipManager() {
   const { t, dir } = useLocale();
-  const { datasets } = useDatasets();
+  const { datasets, addDataset, clearDatasets } = useDatasets();
   const { user } = useAuth();
-  const { activeProject, relationships: persistedRels, addRelationship, removeRelationship } = useProject();
+  const {
+    activeProject,
+    relationships: persistedRels,
+    addRelationship,
+    removeRelationship,
+    setActiveProject,
+    setRelationships: setPersistedRelationships,
+  } = useProject();
   const params = useParams<{ projectId: string }>();
   const projectId = params.projectId ?? activeProject?.id ?? null;
 
@@ -88,10 +101,55 @@ export default function RelationshipManager() {
 
   const hasDatasets = datasets.length > 0;
 
+  // ── Project hydration on direct navigation or page refresh ────────────────
+  // When the user lands here without going through the workspace (e.g. bookmark,
+  // shared link, or browser refresh), the ProjectContext is empty. We detect
+  // this and call loadProject() to populate context before rendering.
+  const [pageLoadState, setPageLoadState] = useState<PageLoadState>("idle");
+  const hydratedIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    // Already hydrated for this project (navigated from workspace)
+    if (projectId && activeProject?.id === projectId) {
+      setPageLoadState("ready");
+      return;
+    }
+    // No project in URL — render in local-only mode immediately
+    if (!projectId) {
+      setPageLoadState("ready");
+      return;
+    }
+    // Avoid re-hydrating the same project twice
+    if (hydratedIdRef.current === projectId) return;
+
+    // Hydrate from server
+    (async () => {
+      setPageLoadState("loading");
+      hydratedIdRef.current = projectId;
+      try {
+        const { loadProject } = await import("@/lib/projectLoader");
+        const { project, datasets: loaded, relationships: loadedRels } =
+          await loadProject(projectId);
+        setActiveProject(project);
+        setPersistedRelationships(loadedRels);
+        clearDatasets();
+        for (const ds of loaded) {
+          addDataset(ds.file, {
+            serverFileId: ds.serverFileId,
+            displayName: ds.displayName,
+          });
+        }
+        setPageLoadState("ready");
+      } catch (err: unknown) {
+        hydratedIdRef.current = null; // allow retry
+        const msg = err instanceof Error ? err.message : String(err);
+        setPageLoadState(msg.includes("404") ? "not-found" : "error");
+      }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, activeProject?.id]);
+
   // ── Relationships state ────────────────────────────────────────────────────
-  // Local relationships are a superset of persisted ones. When the project is
-  // loaded, persisted relationships are mapped to the local format using
-  // dataset.serverFileId as the bridge.
   const [relationships, setRelationships] = useState<Relationship[]>([]);
   const [dismissedKeys, setDismissedKeys] = useState<Set<string>>(() => new Set());
   const [editorInit, setEditorInit] = useState<EditorInit | null>(null);
@@ -101,16 +159,22 @@ export default function RelationshipManager() {
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
-  // ── Load persisted relationships into local state on mount ─────────────────
+  // ── Map persisted relationships to local state whenever data is ready ──────
+  // Re-runs whenever datasets or persistedRels change (e.g. after hydration).
+  // Uses a ref to avoid re-mapping relationships the user has already edited.
+  const mappedOnceRef = useRef(false);
   useEffect(() => {
+    if (pageLoadState !== "ready") return;
     if (!persistedRels.length || !datasets.length) return;
+    if (mappedOnceRef.current) return; // Only seed once; local edits take over after that
+    mappedOnceRef.current = true;
+
     const mapped: Relationship[] = [];
     for (const pr of persistedRels) {
       const dsA = datasets.find(d => d.serverFileId === pr.sourceFileId);
       const dsB = datasets.find(d => d.serverFileId === pr.targetFileId);
       if (!dsA || !dsB) continue;
 
-      // Resolve column info from the parsed file headers
       const colAIdx = dsA.file.headers.indexOf(pr.sourceColumn);
       const colBIdx = dsB.file.headers.indexOf(pr.targetColumn);
 
@@ -118,22 +182,13 @@ export default function RelationshipManager() {
         id: pr.id,
         datasetAId: dsA.id,
         datasetBId: dsB.id,
-        colA: {
-          index: colAIdx >= 0 ? colAIdx : 0,
-          name: pr.sourceColumn,
-          type: "unknown",
-        },
-        colB: {
-          index: colBIdx >= 0 ? colBIdx : 0,
-          name: pr.targetColumn,
-          type: "unknown",
-        },
+        colA: { index: colAIdx >= 0 ? colAIdx : 0, name: pr.sourceColumn, type: "unknown" },
+        colB: { index: colBIdx >= 0 ? colBIdx : 0, name: pr.targetColumn, type: "unknown" },
         confidence: pr.confidenceLevel as Confidence,
       });
     }
     if (mapped.length) setRelationships(mapped);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [pageLoadState, persistedRels, datasets]);
 
   // ── Editor helpers ────────────────────────────────────────────────────────
   const openCreate = useCallback(() => setEditorInit({}), []);
@@ -295,6 +350,84 @@ export default function RelationshipManager() {
   );
 
   const visibleRelationships = relationships.filter(r => !hiddenIds.has(r.id));
+
+  // ── Loading / error / not-found screens (direct navigation / refresh) ──────
+
+  if (pageLoadState === "loading" || pageLoadState === "idle") {
+    return (
+      <div className="flex flex-col h-[100dvh] bg-background text-foreground">
+        {user ? <AuthNav /> : <AppHeader isInWorkspace={false} />}
+        <div className="flex-1 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4 text-center">
+            <div className="p-3 rounded-full bg-primary/10">
+              <FolderOpen className="w-7 h-7 text-primary animate-pulse" />
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-foreground">
+                {t.workspace.loadingProject}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {t.workspace.loadingProjectSub}
+              </p>
+            </div>
+            <div className="w-64 space-y-2 mt-2">
+              {[80, 60, 72].map((w, i) => (
+                <div key={i} className="h-2.5 rounded-full bg-muted animate-pulse" style={{ width: `${w}%` }} />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (pageLoadState === "not-found") {
+    return (
+      <div className="flex flex-col h-[100dvh] bg-background text-foreground">
+        {user ? <AuthNav /> : <AppHeader isInWorkspace={false} />}
+        <div className="flex-1 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4 text-center max-w-sm px-4">
+            <div className="p-3 rounded-full bg-muted">
+              <AlertCircle className="w-7 h-7 text-muted-foreground" />
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm font-semibold text-foreground">{t.workspace.projectNotFound}</p>
+              <p className="text-xs text-muted-foreground">{t.workspace.projectNotFoundSub}</p>
+            </div>
+            <a href="/dashboard" className="mt-1 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors">
+              {t.workspace.backToDashboard}
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (pageLoadState === "error") {
+    return (
+      <div className="flex flex-col h-[100dvh] bg-background text-foreground">
+        {user ? <AuthNav /> : <AppHeader isInWorkspace={false} />}
+        <div className="flex-1 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4 text-center max-w-sm px-4">
+            <div className="p-3 rounded-full bg-destructive/10">
+              <AlertCircle className="w-7 h-7 text-destructive" />
+            </div>
+            <p className="text-sm font-semibold text-foreground">{t.workspace.openingError}</p>
+            <button
+              onClick={() => {
+                hydratedIdRef.current = null;
+                setPageLoadState("idle");
+              }}
+              className="flex items-center gap-2 mt-1 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              {t.common.retry}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
