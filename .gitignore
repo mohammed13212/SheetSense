@@ -1,49 +1,64 @@
-# See https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
-
-# compiled output
-dist
-tmp
-out-tsc
+# ─── Compiled output ──────────────────────────────────────────────────────────
+dist/
+tmp/
+out-tsc/
 *.tsbuildinfo
-.expo
-.expo-shared
+.expo/
+.expo-shared/
 
-# dependencies
-node_modules
+# ─── Dependencies ─────────────────────────────────────────────────────────────
+node_modules/
 
-# IDEs and editors
-/.idea
-.project
-.classpath
-.c9/
-*.launch
-.settings/
-*.sublime-workspace
+# ─── Environment & secrets ────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
 
-# IDE - VSCode
+# ─── Build artifacts ──────────────────────────────────────────────────────────
+coverage/
+
+# ─── IDEs ─────────────────────────────────────────────────────────────────────
+.idea/
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
+*.sublime-workspace
+.project
+.classpath
+.c9/
+*.launch
+.settings/
 
-# misc
-/.sass-cache
-/connect.lock
-/coverage
-/libpeerconnection.log
-npm-debug.log
-yarn-error.log
-testem.log
-/typings
-
-# System Files
+# ─── OS files ─────────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
 
-.cursor/rules/nx-rules.mdc
-.github/instructions/nx.instructions.md
+# ─── Logs ─────────────────────────────────────────────────────────────────────
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
-# Replit
-.cache/
+# ─── Replit runtime ───────────────────────────────────────────────────────────
+# .local contains the Replit dev environment (skills, tasks, etc.)
 .local/
+# .cache is Replit's internal build cache
+.cache/
+
+# ─── Agent memory ─────────────────────────────────────────────────────────────
+# Development-session memory files used by the Replit AI agent
+.agents/
+
+# ─── Development assets ───────────────────────────────────────────────────────
+# Files pasted into the workspace during development (not source code)
+attached_assets/
+
+# ─── Misc ─────────────────────────────────────────────────────────────────────
+.sass-cache/
+/connect.lock
+/libpeerconnection.log
+testem.log
+/typings
+.cursor/
+.github/instructions/
