@@ -14,10 +14,9 @@ import { parseFile, FileParseError } from "@/lib/parseFile";
 import { apiPost, apiPatch, apiDelete } from "@/lib/api";
 import { uploadToStorage } from "@/lib/projectLoader";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-import type { Dataset } from "@/types";
+import type { Dataset, ParsedFile } from "@/types";
 import type { ActiveProject, ProjectFile } from "@/store/ProjectContext";
 import type { User } from "@supabase/supabase-js";
-import type { ParsedFile } from "@/types";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -413,7 +412,6 @@ async function persistFileSidebar(
     addFileToProject(savedFile);
     return savedFile.id;
   } catch (err) {
-    console.warn("Failed to persist sidebar upload:", err);
     return null;
   }
 }

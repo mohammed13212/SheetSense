@@ -32,7 +32,6 @@ import { AuthNav } from "@/components/AuthNav";
 import { AppHeader } from "@/components/AppHeader";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { apiPost, apiDelete } from "@/lib/api";
-import { loadProject } from "@/lib/projectLoader";
 import type { Dataset } from "@/types";
 
 // ─── Domain types ─────────────────────────────────────────────────────────────

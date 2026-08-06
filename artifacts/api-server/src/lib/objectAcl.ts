@@ -59,9 +59,6 @@ function createObjectAccessGroup(
   group: ObjectAccessGroup,
 ): BaseObjectAccessGroup {
   switch (group.type) {
-    // Implement per access group type, e.g.:
-    // case "USER_LIST":
-    //   return new UserListAccessGroup(group.id);
     default:
       throw new Error(`Unknown access group type: ${group.type}`);
   }
