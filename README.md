@@ -138,13 +138,15 @@ Start both the API server and the frontend in separate terminals:
 
 ```bash
 # Terminal 1 — API server (http://localhost:8080)
-pnpm --filter @workspace/api-server run dev
+PORT=8080 pnpm --filter @workspace/api-server run dev
 
-# Terminal 2 — Frontend (Vite dev server)
-pnpm --filter @workspace/sheet-sense run dev
+# Terminal 2 — Frontend (Vite dev server, http://localhost:5173)
+PORT=5173 BASE_PATH=/ pnpm --filter @workspace/sheet-sense run dev
 ```
 
-Or start everything from the workspace root:
+> Both `PORT` and `BASE_PATH` are required by the dev servers and must be set at launch. `BASE_PATH` is the URL prefix the frontend is served from — use `/` for local development.
+
+Or start everything from the workspace root (set env vars in your shell first):
 
 ```bash
 pnpm -r --parallel --if-present run dev
